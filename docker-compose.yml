@@ -1,0 +1,23 @@
+version: '3.4'
+
+x-logging:
+  &default-logging
+  driver: journald
+
+x-labels:
+  &default-labels
+
+services:
+  nexmon:
+    container_name: mitmproxy-plugin
+    build:
+      context: .
+      labels: *default-labels
+    logging: *default-logging
+    privileged: true
+    network_mode: mitmnet
+
+networks:
+  mitmnet:
+    driver_opts:
+      com.docker.network.bridge.name: site99
