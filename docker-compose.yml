@@ -4,15 +4,12 @@ x-logging:
   &default-logging
   driver: journald
 
-x-labels:
-  &default-labels
 
 services:
-  nexmon:
+  mitmproxy_plugin:
     container_name: mitmproxy-plugin
     build:
       context: .
-      labels: *default-labels
     logging: *default-logging
     privileged: true
     network_mode: mitmnet
