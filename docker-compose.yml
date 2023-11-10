@@ -12,9 +12,10 @@ services:
       context: .
     logging: *default-logging
     privileged: true
-    network_mode: mitmnet
+    networks:
+      mitmnet:
 
 networks:
   mitmnet:
     driver_opts:
-      com.docker.network.bridge.name: site99
+      com.docker.network.bridge.name: site98
