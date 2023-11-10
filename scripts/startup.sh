@@ -1,10 +1,5 @@
 #!/bin/bash
 
-# make sure forwarding is on
-sysctl -w net.ipv4.ip_forward=1
-# and so is dnat
-sysctl -w net.ipv4.conf.all.route_localnet=1
-
 nft -f - << EOF
 table inet nat {
         chain prerouting {

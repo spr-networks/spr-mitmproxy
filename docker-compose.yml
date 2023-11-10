@@ -11,7 +11,11 @@ services:
     build:
       context: .
     logging: *default-logging
-    privileged: true
+    cap_add:
+      - NET_ADMIN
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.route_localnet=1
     networks:
       mitmnet:
 
