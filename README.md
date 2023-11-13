@@ -3,6 +3,7 @@ Example mitmproxy container for SPR PLUS
 
 ## Usage
 
+### Prepare the plugin
 from the SPR directory
 ```bash
 cd plugins
@@ -12,3 +13,8 @@ cd mitmproxy
 docker-compose build
 docker-compose up -d
 ```
+
+### Configure SPR
+Add the mitmproxy network to the custom interface rules
+
+Create PLUS dnat to the container
