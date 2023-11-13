@@ -15,6 +15,11 @@ docker-compose up -d
 ```
 
 ### Configure SPR
-Add the mitmproxy network to the custom interface rules
 
-Create PLUS dnat to the container
+1) Add the mitmproxy network to the custom interface rules -> 
+
+2) Create PFW dnat to the container web interface :8081 
+
+3) Create policy routing rules with PFW for traffic to intercept
+
+
