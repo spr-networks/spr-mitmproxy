@@ -25,7 +25,3 @@ docker-compose up -d
 3) Create policy routing rules with PFW for traffic to intercept
 <img width="493" alt="Screen Shot 2023-11-13 at 9 26 06 AM" src="https://github.com/spr-networks/spr-mitmproxy/assets/37549748/c88ee353-bfe3-44b8-93fc-9040caa9244a">
 
-
-## Notes 
-
-Interface names should conforom to site0000, "site" followed by a numbrer. the number is used as an offset for fwmark.
