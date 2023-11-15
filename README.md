@@ -24,7 +24,7 @@ Under `Firewall-> Custom Interface Access` Add a new rule, make sure mitmproxy h
 
 <img width="510" alt="Screen Shot 2023-11-14 at 8 22 34 PM" src="https://github.com/spr-networks/spr-mitmproxy/assets/37549748/71d4c8c9-3812-452f-86df-a7d19fb703a6">
 
-3. Create forwarding rule to the container web interface :8081. Pick an arbitrary IP in the subnet -- although not the same one as the container.
+3. Create a forwarding rule to the container web interface :8081. Pick an arbitrary IP in the subnet -- although not the same one as the container as that confuses dnat.
 <img width="518" alt="Screen Shot 2023-11-14 at 8 54 12 PM" src="https://github.com/spr-networks/spr-mitmproxy/assets/37549748/ff1424c6-b6ad-48d4-8ffe-03186f61abc6">
 
 4. Create a site forward rule with PFW for traffic to intercept
