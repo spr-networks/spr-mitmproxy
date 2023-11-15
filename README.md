@@ -1,5 +1,5 @@
 # spr-mitmproxy
-Example mitmproxy container for SPR PLUS
+Example mitmproxy container for PLUS members using SPR
 
 ## Usage
 
