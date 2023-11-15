@@ -19,8 +19,8 @@ docker-compose build
 - Enable it by toggling the slider
 <img width="511" alt="Screen Shot 2023-11-14 at 8 20 38 PM" src="https://github.com/spr-networks/spr-mitmproxy/assets/37549748/dcc0f1ea-724a-4ed0-856a-56444ea2569f">
 
-2. Add the mitmproxy0 network to the custom interface rules. You can verify your container's network address in the Container tab -> 
-Under `Firewall-> Custom Interface Access` Add a new rule, make sure mitmproxy has 'wan' at least to access the internet. Without this, the container network has no internet access. 
+2. Add `mitmweb0` to the custom interface rules. You can verify your container's network address in the Container tab -> 
+Under `Firewall-> Custom Interface Access` Add a new rule, make sure mitmproxy has `wan` at least to access the internet.
 
 <img width="510" alt="Screen Shot 2023-11-14 at 8 22 34 PM" src="https://github.com/spr-networks/spr-mitmproxy/assets/37549748/71d4c8c9-3812-452f-86df-a7d19fb703a6">
 
