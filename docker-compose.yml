@@ -22,4 +22,4 @@ services:
 networks:
   mitmnet:
     driver_opts:
-      com.docker.network.bridge.name: mitmproxy0
+      com.docker.network.bridge.name: mitmweb0
