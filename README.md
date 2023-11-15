@@ -17,6 +17,7 @@ docker-compose build
 1. Add mitmproxy as a plugin
 -  be sure its been added to `configs/base/custom_compose_paths.json` as above
 <img width="511" alt="Screen Shot 2023-11-14 at 8 20 38 PM" src="https://github.com/spr-networks/spr-mitmproxy/assets/37549748/dcc0f1ea-724a-4ed0-856a-56444ea2569f">
+
 - Enable it by toggling the slider
 
 2. Add the mitmproxy0 network to the custom interface rules. You can verify your container's network address in the Container tab -> 
