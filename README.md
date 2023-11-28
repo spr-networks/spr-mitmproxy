@@ -10,7 +10,7 @@ cd plugins
 git clone https://github.com/spr-networks/spr-mitmproxy
 echo [\"plugins/spr-mitmproxy/docker-compose.yml\"] > ../configs/base/custom_compose_paths.json
 cd spr-mitmproxy
-docker-compose build
+docker compose build
 ```
 
 ### Configure SPR
