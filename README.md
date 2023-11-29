@@ -9,6 +9,7 @@ from the SPR directory
 cd plugins
 git clone https://github.com/spr-networks/spr-mitmproxy
 echo [\"plugins/spr-mitmproxy/docker-compose.yml\"] > ../configs/base/custom_compose_paths.json
+docker compose restart superd #temporary workaround for bug in <= v0.3.1, you can skip this later
 cd spr-mitmproxy
 docker compose build
 ```
