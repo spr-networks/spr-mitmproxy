@@ -1,0 +1,5 @@
+{
+  "Name": "mitmproxy",
+  "ComposeFilePath": "plugins/user/spr-mitmproxy/docker-compose.yml",
+  "Enabled": true
+}
