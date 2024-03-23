@@ -9,5 +9,5 @@ table inet nat {
 }
 EOF
 
-socat UNIX-LISTEN:/state/plugins/spr-mitmproxy/socket,reuseaddr,fork TCP:localhost:8081 &
+haproxy -f /scripts/haproxy.cfg &
 mitmweb -p 9999 -m transparent --web-host 127.0.0.1
