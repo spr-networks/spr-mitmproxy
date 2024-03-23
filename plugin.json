@@ -2,4 +2,9 @@
   "Name": "mitmproxy",
   "ComposeFilePath": "plugins/user/spr-mitmproxy/docker-compose.yml",
   "Enabled": true
+  "UnixPath": "/state/plugins/spr-mitmproxy/socket",
+  "URI": "spr-mitmproxy",
+  "HasUI": true,
+  "SandboxedUI": false,
+  "Enabled": true
 }

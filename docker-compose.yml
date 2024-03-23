@@ -8,8 +8,9 @@ x-logging:
 services:
   mitmproxy_plugin:
     container_name: mitmproxy-plugin
+    image: ghcr.io/spr-networks/spr-tailscale:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
-      context: .
+      context: "${BUILDCTX}."
     logging: *default-logging
     cap_add:
       - NET_ADMIN
@@ -18,6 +19,10 @@ services:
       - net.ipv4.conf.all.route_localnet=1
     networks:
       mitmnet:
+    volumes:
+      - "${SUPERDIR}./state/plugins/spr-mitmproxy:/state/plugins/spr-mitmproxy"
+      - "${SUPERDIR}./configs/base/config.sh:/configs/base/config.sh:ro"
+      - "${SUPERDIR}./configs/plugins/spr-mitmproxy:/configs/spr-mitmproxy"
 
 networks:
   mitmnet:
