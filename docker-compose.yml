@@ -10,7 +10,7 @@ services:
     container_name: spr-mitmproxy
     #image: ghcr.io/spr-networks/spr-tailscale:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
-      context: "${BUILDCTX}."
+      context: "${BUILDCTX:-.}"
     logging: *default-logging
     cap_add:
       - NET_ADMIN
