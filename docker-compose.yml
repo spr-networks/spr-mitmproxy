@@ -6,9 +6,9 @@ x-logging:
 
 
 services:
-  mitmproxy_plugin:
-    container_name: mitmproxy-plugin
-    image: ghcr.io/spr-networks/spr-tailscale:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+  spr-mitmproxy:
+    container_name: spr-mitmproxy
+    #image: ghcr.io/spr-networks/spr-tailscale:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: "${BUILDCTX}."
     logging: *default-logging
