@@ -1,5 +1,5 @@
 # spr-mitmproxy
-Mitmproxy extension for SPR by [www.supernetworks.org](www.supernetworks.org)
+Mitmproxy extension for SPR by [www.supernetworks.org](https://www.supernetworks.org)
 
 ## Usage
 
