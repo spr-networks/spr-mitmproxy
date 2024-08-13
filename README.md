@@ -5,6 +5,8 @@ Mitmproxy extension for SPR by [www.supernetworks.org](www.supernetworks.org)
 
 ### Install the plugin from the UI
 
+Copy this repository [https://github.com/spr-networks/spr-mitmproxy/](https://github.com/spr-networks/spr-mitmproxy/)
+
 <img width="1433" alt="image" src="https://github.com/user-attachments/assets/6194ccd6-0ec2-44f7-b2df-92fe531ba9e6">
 <img width="1256" alt="image" src="https://github.com/user-attachments/assets/c12c5909-cfd0-4f02-8e5d-a232dac6fb24">
 
