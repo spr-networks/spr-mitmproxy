@@ -39,8 +39,12 @@ import InputSelect from './components/InputSelect'
 const MitmproxySetupGuide = ({ subnetIP }) => {
   const steps = [
     {
+      title: 'Configure the mitmweb0 interace below',
+      description: "Follow the form below to grant the mitmproxy container network access",
+    },
+    {
       title: 'Configure devices on SPR',
-      description: "Join devices to the 'mitmweb' group for access to mitmproxy",
+      description: "Join devices to the 'mitmweb' group for access to the mitmproxy admin interface and/or http proxy",
     },
     {
       title: 'Configure the client',
@@ -78,6 +82,19 @@ const MitmproxySetupGuide = ({ subnetIP }) => {
             <Text fontSize="$sm" color="$gray600">The PFW Extension lets you transparently forward traffic. You can selectively apply forwarding rules by domain name (optionally with a regular expression). </Text>
           </VStack>
         </HStack>
+
+        <HStack py="$4">
+          <Link isExternal href={`http://${subnetIP}:8082`}>
+            <LinkText>Go to http://{subnetIP}:8082 for the http proxy interface</LinkText>
+          </Link>
+        </HStack>
+
+        <HStack py="$1">
+          <Link isExternal href={`http://${subnetIP}:8081`}>
+            <LinkText>Go to http://{subnetIP}:8081 for the transparent proxy interface</LinkText>
+          </Link>
+        </HStack>
+
       </VStack>
       </Alert>
     </Box>
@@ -112,13 +129,19 @@ const InterfaceInfo = () => {
 
   const fetchConfig = () => {
     firewallAPI.config().then((c) => {
+      let found = false
       if (c.CustomInterfaceRules) {
         for(let x of c.CustomInterfaceRules) {
           if (x.Interface === mitmName) {
             setInterfaceInfo(x)
             setPreviousInterfaceInfo(x)
+            found = true
           }
         }
+      }
+
+      if (found === false) {
+        setError("Please configure the mitmweb0 interface")
       }
       setLoading(false)
     }).catch(err => {
@@ -238,9 +261,13 @@ const InterfaceInfo = () => {
     }
 
   }
+
+
   return (
     <VStack space="md">
+
       <MitmproxySetupGuide subnetIP={subnetIP} />
+
       <FormControl>
         <FormControlLabel>
           <FormControlLabelText>Mitmproxy container network on {mitmName}</FormControlLabelText>
