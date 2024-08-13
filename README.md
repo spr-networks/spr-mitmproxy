@@ -26,4 +26,7 @@ Configure your device by joining it to the mitmweb group and change your device 
 
 With PLUS's PFW extension, you can forward to the container without having the device join the group
 
-<img width="1438" alt="image" src="https://github.com/user-attachments/assets/4dbbcfe1-17f8-4497-9cfe-928c81b30be2">
+<img width="1444" alt="image" src="https://github.com/user-attachments/assets/ade223fa-e124-4128-94d5-7bfd5d83f8f2">
+
+Then navigate to :8081  on the container to gain access. Note: the device using the interface should be part of the 'mitmweb' group on SPR.
+<img width="1450" alt="image" src="https://github.com/user-attachments/assets/79c6d642-f63b-4e5a-99b1-0935dd4e3ac7">
