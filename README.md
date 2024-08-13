@@ -26,3 +26,4 @@ Configure your device by joining it to the mitmweb group and change your device 
 
 With PLUS's PFW extension, you can forward to the container without having the device join the group
 
+<img width="1438" alt="image" src="https://github.com/user-attachments/assets/4dbbcfe1-17f8-4497-9cfe-928c81b30be2">
