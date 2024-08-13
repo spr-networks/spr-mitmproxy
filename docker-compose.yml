@@ -8,7 +8,7 @@ x-logging:
 services:
   spr-mitmproxy:
     container_name: spr-mitmproxy
-    #image: ghcr.io/spr-networks/spr-tailscale:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    image: ghcr.io/spr-networks/spr-mitmproxy:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
     build:
       context: "${BUILDCTX:-.}"
     logging: *default-logging
@@ -21,7 +21,6 @@ services:
       mitmnet:
     volumes:
       - "${SUPERDIR}./state/plugins/spr-mitmproxy:/state/plugins/spr-mitmproxy"
-      - "${SUPERDIR}./configs/base/config.sh:/configs/base/config.sh:ro"
       - "${SUPERDIR}./configs/plugins/spr-mitmproxy:/configs/spr-mitmproxy"
 
 networks:

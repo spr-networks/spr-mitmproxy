@@ -9,5 +9,10 @@ table inet nat {
 }
 EOF
 
-haproxy -f /scripts/haproxy.cfg &
-mitmweb -p 9999 -m transparent --web-host 127.0.0.1
+# Host a transparent proxy for PFW
+mitmweb -p 9999 -m transparent --web-host 0.0.0.0 --set web_port=8081 &
+
+# Host a regular proxy as well on port 8082
+mitmweb -p 9998 --web-host 0.0.0.0  --set web_port=8082 &
+
+/main
