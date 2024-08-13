@@ -5,7 +5,7 @@ export default class API {
   authHeaders = ''
 
   constructor(baseURL = '') {
-    this.baseURL = baseURL
+    this.baseURL = baseURL.replace(/^\/+/, '')
     this.getAuthHeaders()
   }
 
@@ -27,6 +27,9 @@ export default class API {
 
     if (typeof window !== 'undefined') {
       const { SPR_API_TOKEN } = window
+      if (!SPR_API_TOKEN) {
+
+      }
       if (SPR_API_TOKEN) {
         this.authHeaders = `Bearer ${SPR_API_TOKEN}`
 
@@ -92,7 +95,11 @@ export default class API {
 
     return this.fetch(method, url, body).then((response) => {
       if (response.redirected) {
-        window.location = '/auth/validate'
+        return Promise.Reject({
+          message: 'auth failure',
+          status: 301,
+          response
+        })
       }
 
       if (!response.ok) {
