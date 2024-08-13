@@ -26,7 +26,7 @@ Configure your device by joining it to the mitmweb group and change your device 
 
 ### PLUS users: mitmproxy with transparent forwarding
 
-With PLUS's PFW extension, you can forward to the container without having the device join the group
+With PLUS's PFW extension, you can forward to the container without having the client use a proxy
 
 <img width="1444" alt="image" src="https://github.com/user-attachments/assets/ade223fa-e124-4128-94d5-7bfd5d83f8f2">
 
