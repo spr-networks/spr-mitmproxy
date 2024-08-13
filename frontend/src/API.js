@@ -27,9 +27,6 @@ export default class API {
 
     if (typeof window !== 'undefined') {
       const { SPR_API_TOKEN } = window
-      if (!SPR_API_TOKEN) {
-
-      }
       if (SPR_API_TOKEN) {
         this.authHeaders = `Bearer ${SPR_API_TOKEN}`
 
