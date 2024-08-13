@@ -20,7 +20,9 @@ Copy this repository [https://github.com/spr-networks/spr-mitmproxy](https://git
 
 ### Using mitmproxy with the web proxy
 
-Configure your device by joining it to the mitmweb group and change your device setting to use the HTTP proxy at :9998
+Configure your device by joining it to the mitmweb group and change your device setting to use the HTTP proxy at :9998.
+
+- Optionally visit http://mitm.it and install the mitmproxy certificate to the trust store
 
 ### PLUS users: mitmproxy with transparent forwarding
 
@@ -28,5 +30,9 @@ With PLUS's PFW extension, you can forward to the container without having the d
 
 <img width="1444" alt="image" src="https://github.com/user-attachments/assets/ade223fa-e124-4128-94d5-7bfd5d83f8f2">
 
+- Optionally visit http://mitm.it and install the mitmproxy certificate to the trust store
+
+
 Then navigate to :8081  on the container to gain access. Note: the device using the interface should be part of the 'mitmweb' group on SPR.
+
 <img width="1450" alt="image" src="https://github.com/user-attachments/assets/79c6d642-f63b-4e5a-99b1-0935dd4e3ac7">
