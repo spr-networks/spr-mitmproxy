@@ -43,7 +43,7 @@ const MitmproxySetupGuide = ({ subnetIP }) => {
       description: "Follow the form below to grant the mitmproxy container network access",
     },
     {
-      title: 'Configure devices on SPR',
+      title: 'Configure Access to MITMProxy',
       description: "Join devices to the 'mitmweb' group for access to the mitmproxy admin interface and/or http proxy",
     },
     {
