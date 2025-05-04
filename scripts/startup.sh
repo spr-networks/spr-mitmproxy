@@ -5,6 +5,7 @@ table inet nat {
         chain prerouting {
                 type nat hook prerouting priority filter; policy accept;
                 tcp dport { 80, 443 } dnat ip to 127.0.0.1:9999
+                udp dport { 443 } dnat ip to 127.0.0.1:9999
         }
 }
 EOF
