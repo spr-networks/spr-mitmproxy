@@ -1,12 +1,12 @@
-FROM ubuntu:23.04 as builder
+FROM ubuntu:24.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update
 RUN apt-get install -y --no-install-recommends nftables iproute2 netcat-traditional inetutils-ping net-tools nano ca-certificates git curl
 RUN mkdir /code
 WORKDIR /code
 ARG TARGETARCH
-RUN curl -O https://dl.google.com/go/go1.22.6.linux-${TARGETARCH}.tar.gz
-RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.22.6.linux-${TARGETARCH}.tar.gz
+RUN curl -O https://dl.google.com/go/go1.24.2.linux-${TARGETARCH}.tar.gz
+RUN rm -rf /usr/local/go && tar -C /usr/local -xzf go1.24.2.linux-${TARGETARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:$PATH"
 COPY code/ /code/
 
@@ -17,7 +17,7 @@ RUN --mount=type=tmpfs,target=/tmpfs \
 
 
 # build ui
-FROM node:18 as builder-ui
+FROM node:18 AS builder-ui
 WORKDIR /app
 COPY frontend ./
 ARG USE_TMPFS=true
