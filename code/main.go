@@ -55,8 +55,8 @@ func main() {
 
 	// map /ui to /ui on fs
 	spa := spaHandler{staticPath: "/ui", indexPath: "index.html"}
-	unix_plugin_router.PathPrefix("/").Handler(spa)
 	unix_plugin_router.HandleFunc("/webpass", webpass).Methods("GET")
+	unix_plugin_router.PathPrefix("/").Handler(spa)
 
 	//tbd dynamic webpass.
 

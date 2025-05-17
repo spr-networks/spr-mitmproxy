@@ -150,7 +150,7 @@ const InterfaceInfo = () => {
     })
 
 
-    api.get("/webpass").then((webpass) => setWebpass(webpass))
+    api.get("/plugins/spr-mitmproxy/webpass").then((webpass) => setWebpass(webpass))
   }
 
   useEffect(() => {
