@@ -12,7 +12,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-
 var UNIX_PLUGIN_LISTENER = "/state/plugins/spr-mitmproxy/socket"
 
 // set up SPA handler. From gorilla mux's documentation
@@ -40,6 +39,10 @@ func (h spaHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.FileServer(http.Dir(h.staticPath)).ServeHTTP(w, r)
 }
 
+func webpass(w http.ResponseWriter, r *http.Request) {
+	http.ServeFile(w, r, "/tmp/webpass")
+}
+
 func logRequest(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("%s %s %s\n", r.RemoteAddr, r.Method, r.URL)
@@ -53,6 +56,7 @@ func main() {
 	// map /ui to /ui on fs
 	spa := spaHandler{staticPath: "/ui", indexPath: "index.html"}
 	unix_plugin_router.PathPrefix("/").Handler(spa)
+	unix_plugin_router.HandleFunc("/webpass", webpass).Methods("GET")
 
 	//tbd dynamic webpass.
 

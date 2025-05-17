@@ -22,19 +22,17 @@ WORKDIR /app
 COPY frontend ./
 
 ARG USE_TMPFS=true
-RUN openssl rand -hex 32 > /webpass
 RUN --mount=type=tmpfs,target=/tmpfs \
     [ "$USE_TMPFS" = "true" ] && \
         mkdir /tmpfs/cache /tmpfs/node_modules && \
         ln -s /tmpfs/node_modules /app/node_modules && \
         ln -s /tmpfs/cache /usr/local/share/.cache; \
-    WEBPASS=$(cat /webpass) yarn install --network-timeout 86400000 && yarn run build
+    yarn install --network-timeout 86400000 && yarn run build
 
 FROM mitmproxy/mitmproxy
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends curl nftables haproxy && rm -rf /var/lib/apt/lists/*
 COPY scripts /scripts
 COPY --from=builder /main /
-COPY --from=builder-ui /webpass /
 COPY --from=builder-ui /app/build /ui/
 ENTRYPOINT ["/scripts/startup.sh"]

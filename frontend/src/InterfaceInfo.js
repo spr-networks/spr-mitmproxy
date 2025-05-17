@@ -36,7 +36,7 @@ import { GroupMenu, TagMenu, PolicyMenu } from './components/TagMenu.js'
 //import ProtocolRadio from 'components/Form/ProtocolRadio'
 import InputSelect from './components/InputSelect'
 
-const MitmproxySetupGuide = ({ subnetIP }) => {
+const MitmproxySetupGuide = ({ webpass, subnetIP }) => {
   const steps = [
     {
       title: 'Configure the mitmweb0 interace below',
@@ -84,13 +84,13 @@ const MitmproxySetupGuide = ({ subnetIP }) => {
         </HStack>
 
         <HStack py="$4">
-          <Link isExternal href={`http://${subnetIP}:8082?token=${process.env.WEBPASS}`}>
+          <Link isExternal href={`http://${subnetIP}:8082?token=${webpass}`}>
             <LinkText>Go to http://{subnetIP}:8082 for the http proxy interface</LinkText>
           </Link>
         </HStack>
 
         <HStack py="$1">
-          <Link isExternal href={`http://${subnetIP}:8081?token=${process.env.WEBPASS}`}>
+          <Link isExternal href={`http://${subnetIP}:8081?token=${webpass}`}>
             <LinkText>Go to http://{subnetIP}:8081 for the transparent proxy interface</LinkText>
           </Link>
         </HStack>
@@ -111,6 +111,7 @@ const InterfaceInfo = () => {
   const [interfaceList, setInterfaceList] = useState([])
   const [subnet, setSubnet] = useState('')
   const [subnetIP, setSubnetIP] = useState('')
+  const [webpass, setWebpass] = useState("")
 
   const defaultMitmPolicies = ["dns", "wan"]
   const defaultMitmGroups = ["mitmweb"]
@@ -147,6 +148,9 @@ const InterfaceInfo = () => {
     }).catch(err => {
       setError("oops")
     })
+
+
+    api.get("/webpass").then((webpass) => setWebpass(webpass))
   }
 
   useEffect(() => {
@@ -266,7 +270,7 @@ const InterfaceInfo = () => {
   return (
     <VStack space="md">
 
-      <MitmproxySetupGuide subnetIP={subnetIP} />
+      <MitmproxySetupGuide subnetIP={subnetIP} webpass={webpass} />
 
       <FormControl>
         <FormControlLabel>

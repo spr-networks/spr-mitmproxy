@@ -10,8 +10,8 @@ table inet nat {
 }
 EOF
 
-WEBPASS=$(cat /webpass)
-
+echo -n $(openssl rand -hex 32) > /tmp/webpass
+WEBPASS=$(cat /tmp/webpass)
 # Host a transparent proxy for PFW
 mitmweb -p 9999 -m transparent --set web_password=$WEBPASS --web-host 0.0.0.0 --set web_port=8081 &
 
