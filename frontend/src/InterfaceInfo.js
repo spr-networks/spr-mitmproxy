@@ -84,13 +84,13 @@ const MitmproxySetupGuide = ({ subnetIP }) => {
         </HStack>
 
         <HStack py="$4">
-          <Link isExternal href={`http://${subnetIP}:8082`}>
+          <Link isExternal href={`http://${subnetIP}:8082?token=${process.env.WEBPASS}`}>
             <LinkText>Go to http://{subnetIP}:8082 for the http proxy interface</LinkText>
           </Link>
         </HStack>
 
         <HStack py="$1">
-          <Link isExternal href={`http://${subnetIP}:8081`}>
+          <Link isExternal href={`http://${subnetIP}:8081?token=${process.env.WEBPASS}`}>
             <LinkText>Go to http://{subnetIP}:8081 for the transparent proxy interface</LinkText>
           </Link>
         </HStack>

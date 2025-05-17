@@ -54,6 +54,8 @@ func main() {
 	spa := spaHandler{staticPath: "/ui", indexPath: "index.html"}
 	unix_plugin_router.PathPrefix("/").Handler(spa)
 
+	//tbd dynamic webpass.
+
 	os.Remove(UNIX_PLUGIN_LISTENER)
 	unixPluginListener, err := net.Listen("unix", UNIX_PLUGIN_LISTENER)
 	if err != nil {
