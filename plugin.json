@@ -6,5 +6,6 @@
   "URI": "spr-mitmproxy",
   "HasUI": true,
   "Icon": "Search",
+  "HasTopology": true,
   "SandboxedUI": false
 }
