@@ -61,6 +61,7 @@
   },
   "devDependencies": {
     "@craco/craco": "^7.1.0",
-    "babel-plugin-react-native-web": "^0.19.9"
+    "babel-plugin-react-native-web": "^0.19.9",
+    "style-loader": "^3.3.1"
   }
 }
