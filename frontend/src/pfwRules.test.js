@@ -1,6 +1,7 @@
 import {
   TRANSPARENT_CLIENT_TAG,
   TRANSPARENT_PROXY_PORT,
+  TRANSPARENT_ROUTE_INTERFACE,
   matchesTransparentRule,
   transparentForwardingState,
   transparentRulesFor
@@ -16,7 +17,8 @@ describe('mitmproxy PFW rules', () => {
       expect(rule.Client).toEqual({ Tag: TRANSPARENT_CLIENT_TAG })
       expect(rule.OriginalDst.IP).toBe('0.0.0.0/0')
       expect(rule.Dst).toEqual({ IP: '172.23.0.2' })
-      expect(rule.DstPort).toBe(TRANSPARENT_PROXY_PORT)
+      expect(rule.DstPort).toBe('')
+      expect(rule.DstInterface).toBe(TRANSPARENT_ROUTE_INTERFACE)
     })
   })
 
@@ -43,6 +45,22 @@ describe('mitmproxy PFW rules', () => {
     }))
     const state = transparentForwardingState(
       { ForwardingRules: stale },
+      '172.23.0.2'
+    )
+
+    expect(state.configured).toBe(false)
+    expect(state.needsRepair).toBe(true)
+    expect(state.managedCount).toBe(2)
+  })
+
+  test('marks the old host DNAT rules for repair', () => {
+    const legacy = transparentRulesFor('172.23.0.2').map((rule) => ({
+      ...rule,
+      DstPort: TRANSPARENT_PROXY_PORT,
+      DstInterface: ''
+    }))
+    const state = transparentForwardingState(
+      { ForwardingRules: legacy },
       '172.23.0.2'
     )
 

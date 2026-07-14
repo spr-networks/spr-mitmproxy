@@ -39,6 +39,7 @@ import { GroupMenu, PolicyMenu, TagMenu } from './components/TagMenu.js'
 import {
   TRANSPARENT_CLIENT_TAG,
   TRANSPARENT_PROXY_PORT,
+  TRANSPARENT_ROUTE_INTERFACE,
   isManagedTransparentRule,
   matchesTransparentRule,
   transparentForwardingState,
@@ -443,16 +444,16 @@ const TransparentForwarding = ({ hasPFW, proxyIP }) => {
                   </Text>
                 </HStack>
                 <Text size="sm" color="$muted500" fontFamily="$mono">
-                  DNAT to {proxyIP || 'proxy'}:{TRANSPARENT_PROXY_PORT}
+                  Route via {proxyIP || 'proxy'} on {TRANSPARENT_ROUTE_INTERFACE}
                 </Text>
               </HStack>
             ))}
           </VStack>
 
           <Text size="xs" color="$muted500">
-            PFW rewrites both the destination address and port. mitmproxy's
-            transparent listener recovers the original host and port from
-            conntrack before connecting upstream.
+            PFW preserves the original destination and policy-routes the packet
+            through the container. The container then redirects ports 80 and
+            443 to its transparent listener on port {TRANSPARENT_PROXY_PORT}.
           </Text>
 
           {state.configured && state.managedCount === 0 ? (

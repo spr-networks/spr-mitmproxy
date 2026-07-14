@@ -1,5 +1,6 @@
 export const TRANSPARENT_PROXY_PORT = '9999'
 export const TRANSPARENT_CLIENT_TAG = 'mitmproxy'
+export const TRANSPARENT_ROUTE_INTERFACE = 'mitmweb0'
 
 const PORTS = [
   { name: 'mitmproxy: transparent HTTP', port: '80' },
@@ -15,9 +16,11 @@ export const transparentRulesFor = (proxyIP) =>
     Protocol: 'tcp',
     OriginalDst: { IP: '0.0.0.0/0' },
     OriginalDstPort: port,
+    // Keep the original destination tuple intact until the packet reaches the
+    // container. Its own nft rule redirects the traffic to mitmproxy locally.
     Dst: { IP: hostIP(proxyIP) },
-    DstPort: TRANSPARENT_PROXY_PORT,
-    DstInterface: '',
+    DstPort: '',
+    DstInterface: TRANSPARENT_ROUTE_INTERFACE,
     Disabled: false,
     Condition: '',
     Expiration: 0
@@ -47,8 +50,8 @@ export const matchesTransparentRule = (rule, desired) => {
     rule?.OriginalDst?.IP === '0.0.0.0/0' &&
     String(rule?.OriginalDstPort || '') === desired.OriginalDstPort &&
     hostIP(rule?.Dst?.IP) === hostIP(desired.Dst.IP) &&
-    String(rule?.DstPort || '') === TRANSPARENT_PROXY_PORT &&
-    !rule?.DstInterface
+    !rule?.DstPort &&
+    rule?.DstInterface === TRANSPARENT_ROUTE_INTERFACE
   )
 }
 

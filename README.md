@@ -33,8 +33,10 @@ device setting to use the HTTP proxy at `:9998`.
 
 With PLUS's PFW extension, add the `mitmproxy` tag only to devices that should
 be transparently intercepted. The plugin's Transparent forwarding card creates
-the HTTP and HTTPS PFW rules for that tag. The `mitmweb` access group is not
-used as the interception selector.
+HTTP and HTTPS policy-routing rules for that tag. PFW preserves the original
+destination while routing the traffic through the mitmproxy container; the
+container performs the local redirect to its transparent listener. The
+`mitmweb` access group is not used as the interception selector.
 
 <img width="1444" alt="image" src="https://github.com/user-attachments/assets/ade223fa-e124-4128-94d5-7bfd5d83f8f2">
 
