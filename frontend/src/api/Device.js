@@ -2,7 +2,7 @@ import API from '../API'
 
 export class APIDevice extends API {
   constructor() {
-    super('/')
+    super('')
   }
 
   list() {

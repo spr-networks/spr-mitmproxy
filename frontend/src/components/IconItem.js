@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { Icon } from '@gluestack-ui/themed'
+import { Icon } from '@spr-networks/plugin-ui'
 import { BrandIcons } from './IconUtils'
 
 import {

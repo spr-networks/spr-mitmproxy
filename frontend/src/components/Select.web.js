@@ -13,7 +13,7 @@ import {
   SelectDragIndicator,
   SelectItem,
   ChevronDownIcon
-} from '@gluestack-ui/themed'
+} from '@spr-networks/plugin-ui'
 
 /*
 //import { Select as NBSelect } //OLD

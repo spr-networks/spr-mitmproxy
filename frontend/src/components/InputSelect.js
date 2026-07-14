@@ -22,7 +22,7 @@ import {
   ActionsheetItem,
   ActionsheetItemText,
   ActionsheetScrollView
-} from '@gluestack-ui/themed'
+} from '@spr-networks/plugin-ui'
 
 import IconItem from './IconItem'
 

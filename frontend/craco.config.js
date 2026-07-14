@@ -51,6 +51,28 @@ module.exports = {
       if (!oneOfRule) {
         throw new Error('webpack oneOf rules not found')
       }
+
+      // The shared plugin shell ships JSX source so plugin frontends can use
+      // the exact same theme tokens and primitives as the SPR host.
+      const appBabel = oneOfRule.oneOf.find(
+        (loader) =>
+          loader.loader?.includes('babel-loader') && loader.include
+      )
+      if (!appBabel) {
+        throw new Error('application babel-loader not found')
+      }
+      oneOfRule.oneOf.unshift({
+        test: /\.(js|mjs|jsx)$/,
+        include: [
+          /node_modules[\\/]@gluestack-ui[\\/]/,
+          /node_modules[\\/]@gluestack-style[\\/]/,
+          /node_modules[\\/]@legendapp[\\/]/,
+          /node_modules[\\/]@spr-networks[\\/]plugin-ui[\\/]/
+        ],
+        loader: appBabel.loader,
+        options: { ...appBabel.options, sourceType: 'unambiguous' }
+      })
+
       oneOfRule.oneOf.forEach((loader) => {
         if (
           loader.test?.test?.('test.module.css') ||

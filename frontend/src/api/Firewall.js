@@ -2,7 +2,7 @@ import API from '../API'
 
 export class APIFirewall extends API {
   constructor() {
-    super('/firewall/')
+    super('firewall/')
   }
 
   config() {

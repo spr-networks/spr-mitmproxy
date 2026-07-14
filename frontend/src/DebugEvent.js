@@ -1,5 +1,5 @@
 import React from 'react'
-import { Text, VStack } from '@gluestack-ui/themed'
+import { Text, VStack } from '@spr-networks/plugin-ui'
 
 const DebugEvent = ({ message, ...props }) => {
   return message ? (

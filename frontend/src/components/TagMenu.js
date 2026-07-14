@@ -11,7 +11,7 @@ import {
   MenuItemLabel,
   AddIcon,
   CloseIcon
-} from '@gluestack-ui/themed'
+} from '@spr-networks/plugin-ui'
 
 import ModalConfirm from './ModalConfirm'
 

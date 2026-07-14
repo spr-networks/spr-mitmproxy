@@ -1,7 +1,4 @@
-import API from '../API.js'
-
-const api = new API()
+export { API, api } from '@spr-networks/plugin-ui'
 export {firewallAPI} from './Firewall'
 export {groupAPI} from './Group'
 export {deviceAPI} from './Device'
-export { API, api}

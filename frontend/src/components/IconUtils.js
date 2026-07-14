@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { createIcon } from '@gluestack-ui/themed'
+import { createIcon } from '@spr-networks/plugin-ui'
 import { Svg, Path, Use, G, Symbol } from 'react-native-svg'
 
 const Akamai = createIcon({

@@ -1,66 +1,42 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react'
+import React, { useEffect, useState } from 'react'
+import { ListHeader, Page } from '@spr-networks/plugin-ui'
 
-import {
-Alert,
-Link,
-LinkText,
-HStack,
-Text,
-View,
-VStack
-} from '@gluestack-ui/themed'
-import { api } from './api/index.js';
-
+import { api } from './api/index.js'
 import InterfaceInfo from './InterfaceInfo.js'
-//import DebugEvent from './DebugEvent.js'
 
-const Plugin = forwardRef((props, ref) => {
-  const [message, setMessage] = useState(null)
-  const [hasPFW, setHasPfw] = useState(false)
-
-  useImperativeHandle(ref, () => ({
-    onMessage: (event) => {
-      setMessage(event.data)
-    }
-  }))
+export default function Plugin() {
+  const [hasPFW, setHasPFW] = useState(null)
 
   useEffect(() => {
+    let active = true
+
     api
       .get('/plugins/pfw/config')
-      .then((pfw) => {
-        setHasPfw(true)
-      })
-      //.catch((err) => alertContext.error('fail ' + err))
-      .catch((err) => {
-        setHasPfw(false)
-      })
-  }, []);
+      .then(() => active && setHasPFW(true))
+      .catch(() => active && setHasPFW(false))
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const status =
+    hasPFW === null
+      ? 'Checking features'
+      : hasPFW
+        ? 'Transparent proxy ready'
+        : 'HTTP proxy ready'
 
   return (
-    <View
-      h="$full"
-      bg="$backgroundContentLight"
-      sx={{ _dark: { bg: '$backgroundContentDark' } }}
-    >
-      <VStack space="lg">
-        {hasPFW && (
-          <Alert status="warning">
-          <VStack>
-          <HStack>
-          <Text fontWeight="$semibold">Note:</Text><Text>PLUS is recommended for transparent forwarding and domain-name based matching</Text>
-          </HStack>
-          <Link isExternal href="https://www.supernetworks.org/plus.html">
-            <LinkText>Learn more about PLUS</LinkText>
-          </Link>
-          </VStack>
-          </Alert>
-
-        )}
-        {/*<DebugEvent message={message} />*/}
-        <InterfaceInfo />
-      </VStack>
-    </View>
+    <Page testID="mitmproxy-page">
+      <ListHeader
+        title="mitmproxy"
+        description="Inspect and debug device traffic through an isolated proxy network"
+        mark="mp"
+        status={status}
+        statusAction={hasPFW ? 'success' : 'muted'}
+      />
+      <InterfaceInfo hasPFW={hasPFW === true} />
+    </Page>
   )
-})
-
-export default Plugin
+}

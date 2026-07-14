@@ -20,7 +20,7 @@ import {
   ModalFooter,
   AddIcon,
   CloseIcon
-} from '@gluestack-ui/themed'
+} from '@spr-networks/plugin-ui'
 
 import { Select } from './Select.js'
 import ClientSelect from './ClientSelect.js'

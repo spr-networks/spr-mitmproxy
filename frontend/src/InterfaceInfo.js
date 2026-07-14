@@ -1,369 +1,526 @@
-import React, { useState, useEffect } from 'react';
-import { AlertCircle } from 'lucide-react-native';
-
+import React, { useEffect, useMemo, useState } from 'react'
 import {
-  Alert,
-  AlertText,
-  AlertIcon,
+  Badge,
+  BadgeText,
   Box,
   Button,
+  ButtonIcon,
   ButtonText,
-  Checkbox,
-  CheckboxIcon,
-  CheckboxIndicator,
-  CheckboxLabel,
-  CheckboxGroup,
-  Center,
-  FormControl,
-  FormControlHelper,
-  FormControlHelperText,
-  FormControlLabel,
-  FormControlLabelText,
+  Card,
+  EmptyState,
   Heading,
   HStack,
-  Input,
-  InputField,
+  Icon,
+  KeyVal,
   Link,
   LinkText,
-  Switch,
+  Loading,
+  SectionHeader,
+  StatTile,
+  StatusDot,
   Text,
-  VStack
-} from '@gluestack-ui/themed'
+  TextField,
+  VStack,
+  useAlert
+} from '@spr-networks/plugin-ui'
+import {
+  AlertCircle,
+  ExternalLink,
+  RotateCcw,
+  Save,
+  ServerCrash
+} from 'lucide-react-native'
 
-import { api, firewallAPI } from './api/index.js';
-import { PolicyItem, GroupItem, TagItem } from './components/TagItem.js';
-import { GroupMenu, TagMenu, PolicyMenu } from './components/TagMenu.js'
-//import ProtocolRadio from 'components/Form/ProtocolRadio'
-import InputSelect from './components/InputSelect'
+import { api, firewallAPI } from './api/index.js'
+import { GroupItem, PolicyItem, TagItem } from './components/TagItem.js'
+import { GroupMenu, PolicyMenu, TagMenu } from './components/TagMenu.js'
 
-const MitmproxySetupGuide = ({ webpass, subnetIP }) => {
-  const steps = [
-    {
-      title: 'Configure the mitmweb0 interace below',
-      description: "Follow the form below to grant the mitmproxy container network access",
-    },
-    {
-      title: 'Configure Access to MITMProxy',
-      description: "Join devices to the 'mitmweb' group for access to the mitmproxy admin interface and/or http proxy",
-    },
-    {
-      title: 'Configure the client',
-      description: `Configure your device to use the HTTP proxy at ${subnetIP}:9998, and install the CA cert by visiting http://mitm.it on the device`,
-    },
-    {
-      title: 'Set up forwarding rule (for PFW users)',
-      description: `With PLUS's PFW extension, set a forwarding rule to the transparent proxy at ${subnetIP}:9999. Ports 80/443 are automatically translated.`,
-    },
-  ];
+const MITM_INTERFACE = 'mitmweb0'
+const DEFAULT_POLICIES = ['dns', 'wan']
+const DEFAULT_GROUPS = ['mitmweb']
+const AVAILABLE_POLICIES = [
+  'wan',
+  'dns',
+  'lan',
+  'api',
+  'lan_upstream',
+  'disabled'
+]
 
-  return (
-    <Box  borderRadius="$lg" shadowColor="$gray300" >
-      <Heading size="lg" mb="$6">Mitmproxy Setup Guide</Heading>
-      <Alert status="warning">
-      <VStack space="$6">
-        {steps.map((step, index) => (
-          <HStack key={index} space="$4" alignItems="flex-start">
-            <Center w="$4" h="$4" bg="$blue500" borderRadius="$full">
-              <Text color="$white" fontWeight="$bold">{index + 1}</Text>
-            </Center>
-            <VStack flex={2}>
-              <Text fontWeight="$semibold" fontSize="$md">{step.title}</Text>
-              <Text fontSize="$sm" color="$gray600">{step.description}</Text>
-            </VStack>
-          </HStack>
-        ))}
+const defaultRule = () => ({
+  RuleName: 'mitmproxy',
+  Disabled: false,
+  Interface: MITM_INTERFACE,
+  SrcIP: '',
+  RouteDst: '',
+  Policies: [...DEFAULT_POLICIES],
+  Groups: [...DEFAULT_GROUPS],
+  Tags: []
+})
 
-        <HStack space="$4" alignItems="flex-start">
-          <Center w="$4" h="$4" bg="$blue500" borderRadius="$full">
-            <Text color="$white" fontWeight="$bold">!</Text>
-          </Center>
-          <VStack flex={2}>
-            <Text fontWeight="$semibold" fontSize="$md">Advanced Features with PLUS</Text>
-            <Text fontSize="$sm" color="$gray600">The PFW Extension lets you transparently forward traffic. You can selectively apply forwarding rules by domain name (optionally with a regular expression). </Text>
-          </VStack>
-        </HStack>
+const normalizeRule = (rule) => ({
+  ...defaultRule(),
+  ...rule,
+  Policies: rule?.Policies || [...DEFAULT_POLICIES],
+  Groups: rule?.Groups || [...DEFAULT_GROUPS],
+  Tags: rule?.Tags || []
+})
 
-        <HStack py="$4">
-          <Link isExternal href={`http://${subnetIP}:8082?token=${webpass}`}>
-            <LinkText>Go to http://{subnetIP}:8082 for the http proxy interface</LinkText>
-          </Link>
-        </HStack>
-
-        <HStack py="$1">
-          <Link isExternal href={`http://${subnetIP}:8081?token=${webpass}`}>
-            <LinkText>Go to http://{subnetIP}:8081 for the transparent proxy interface</LinkText>
-          </Link>
-        </HStack>
-
-      </VStack>
-      </Alert>
-    </Box>
-  );
-};
-
-
-const InterfaceInfo = () => {
-  const mitmName = 'mitmweb0'
-  const defaultRuleName = 'mitmproxy'
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const [interfaceList, setInterfaceList] = useState([])
-  const [subnet, setSubnet] = useState('')
-  const [subnetIP, setSubnetIP] = useState('')
-  const [webpass, setWebpass] = useState("")
-
-  const defaultMitmPolicies = ["dns", "wan"]
-  const defaultMitmGroups = ["mitmweb"]
-  const [interfaceInfo, setInterfaceInfo] = useState({
-     RuleName: "mitmproxy",
-     Disabled: false,
-     Interface: mitmName,
-     SrcIP: "", //172.18.0.0/16",
-     RouteDst:"",
-     Policies: defaultMitmPolicies,
-     Groups: defaultMitmGroups,
-     Tags:[]}
+const findMitmNetwork = (networks) =>
+  (Array.isArray(networks) ? networks : []).find(
+    (network) =>
+      network.Options?.['com.docker.network.bridge.name'] === MITM_INTERFACE
   )
 
+const serviceIPFor = (subnet) => {
+  const parts = String(subnet || '').split('/')[0].split('.')
+  if (parts.length !== 4 || parts.some((part) => !/^\d+$/.test(part))) {
+    return ''
+  }
+  return `${parts[0]}.${parts[1]}.${parts[2]}.2`
+}
+
+const EndpointLink = ({ href, children }) => {
+  if (!href) {
+    return (
+      <Text size="sm" color="$muted400">
+        {children}
+      </Text>
+    )
+  }
+
+  return (
+    <Link isExternal href={href}>
+      <HStack space="xs" alignItems="center">
+        <LinkText size="sm" fontWeight="$semibold">
+          {children}
+        </LinkText>
+        <Icon as={ExternalLink} size="xs" color="$primary600" />
+      </HStack>
+    </Link>
+  )
+}
+
+const Step = ({ number, title, children }) => (
+  <HStack space="md" alignItems="flex-start">
+    <Box
+      w={30}
+      h={30}
+      flexShrink={0}
+      borderRadius="$full"
+      alignItems="center"
+      justifyContent="center"
+      bg="$primary100"
+      sx={{ _dark: { bg: '$primary800' } }}
+    >
+      <Text
+        size="xs"
+        fontWeight="$bold"
+        color="$primary800"
+        sx={{ _dark: { color: '$primary100' } }}
+      >
+        {number}
+      </Text>
+    </Box>
+    <VStack space="xs" flex={1}>
+      <Text
+        size="sm"
+        fontWeight="$semibold"
+        color="$textLight900"
+        sx={{ _dark: { color: '$textDark50' } }}
+      >
+        {title}
+      </Text>
+      <Text size="sm" color="$muted500" lineHeight="$sm">
+        {children}
+      </Text>
+    </VStack>
+  </HStack>
+)
+
+const SetupGuide = ({ hasPFW, proxyIP }) => (
+  <Card>
+    <SectionHeader title="Connect a device" />
+    <VStack space="lg">
+      <Step number="1" title="Allow the container network">
+        Review the detected source range below, then save the firewall access
+        rule for {MITM_INTERFACE}.
+      </Step>
+      <Step number="2" title="Grant device access">
+        Add client devices to the mitmweb group so they can reach the proxy and
+        its administration interface.
+      </Step>
+      <Step number="3" title="Configure the HTTP proxy">
+        Set the client proxy to {proxyIP ? `${proxyIP}:9998` : 'the address shown above'},
+        then visit http://mitm.it on that device to install its mitmproxy CA.
+      </Step>
+      <Step number="4" title="Forward traffic automatically (optional)">
+        {hasPFW
+          ? `PFW is available. Point a forwarding rule at ${proxyIP || 'the proxy'}:9999; ports 80 and 443 are translated automatically.`
+          : 'Transparent forwarding and domain-based matching require the PLUS PFW extension.'}
+      </Step>
+      {!hasPFW ? (
+        <Box
+          px="$4"
+          py="$3"
+          borderRadius="$xl"
+          borderWidth={1}
+          borderColor="$borderColorCardLight"
+          bg="$backgroundContentLight"
+          sx={{
+            _dark: {
+              bg: '$backgroundContentDark',
+              borderColor: '$borderColorCardDark'
+            }
+          }}
+        >
+          <EndpointLink href="https://www.supernetworks.org/plus.html">
+            Learn more about transparent forwarding with PLUS
+          </EndpointLink>
+        </Box>
+      ) : null}
+    </VStack>
+  </Card>
+)
+
+const ErrorNotice = ({ message }) =>
+  message ? (
+    <HStack
+      role="alert"
+      space="sm"
+      alignItems="flex-start"
+      px="$4"
+      py="$3"
+      borderRadius="$xl"
+      borderWidth={1}
+      borderColor="$error200"
+      bg="$error50"
+      sx={{
+        _dark: {
+          bg: '$backgroundCardDark',
+          borderColor: '$error800'
+        }
+      }}
+    >
+      <Icon as={AlertCircle} color="$error600" mt="$0.5" />
+      <Text
+        size="sm"
+        color="$error700"
+        flex={1}
+        sx={{ _dark: { color: '$error300' } }}
+      >
+        {message}
+      </Text>
+    </HStack>
+  ) : null
+
+export default function InterfaceInfo({ hasPFW }) {
+  const alert = useAlert()
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [subnet, setSubnet] = useState('')
+  const [proxyIP, setProxyIP] = useState('')
+  const [webpass, setWebpass] = useState('')
+  const [interfaceInfo, setInterfaceInfo] = useState(defaultRule)
   const [previousInterfaceInfo, setPreviousInterfaceInfo] = useState(null)
 
-  const fetchConfig = () => {
-    firewallAPI.config().then((c) => {
-      const configuredRule = c.CustomInterfaceRules?.find(
-        (rule) => rule.Interface === mitmName
-      )
-      if (configuredRule) {
-        setInterfaceInfo(configuredRule)
-        setPreviousInterfaceInfo(configuredRule)
-      }
-      setLoading(false)
-    }).catch(err => {
-      setError(`Unable to load firewall config${err.status ? ` (${err.status})` : ''}`)
-      setLoading(false)
-    })
-
-
-    api.get("/plugins/spr-mitmproxy/webpass").then((webpass) => setWebpass(webpass))
-  }
-
   useEffect(() => {
-    fetchConfig()
+    let active = true
 
-    api
-      .get('/info/dockernetworks')
-      .then((docker) => {
-        let networked = docker.filter(
-          (n) => n.Options && n.Options['com.docker.network.bridge.name']
+    const load = async () => {
+      const [firewallResult, webpassResult, networksResult] =
+        await Promise.allSettled([
+          firewallAPI.config(),
+          api.get('/plugins/spr-mitmproxy/webpass'),
+          api.get('/info/dockernetworks')
+        ])
+
+      if (!active) return
+
+      const errors = []
+      let rule = defaultRule()
+
+      if (firewallResult.status === 'fulfilled') {
+        const configuredRule = firewallResult.value.CustomInterfaceRules?.find(
+          (candidate) => candidate.Interface === MITM_INTERFACE
         )
-
-        for (let n of networked) {
-          let iface = n.Options['com.docker.network.bridge.name']
-          if (n.IPAM?.Config?.[0]?.Subnet) {
-            let subnet = n.IPAM.Config[0].Subnet
-            if (iface === mitmName) {
-              setSubnet(subnet)
-              setInterfaceInfo((current) => ({
-                ...current,
-                SrcIP: current.SrcIP || subnet
-              }))
-              if (subnet.includes('/')) {
-                let y = subnet.split('.')
-                setSubnetIP(y[0] + '.' + y[1] + '.' + y[2] + '.' + '2')
-              }
-            }
-          }
+        if (configuredRule) {
+          rule = normalizeRule(configuredRule)
+          setPreviousInterfaceInfo(rule)
         }
-        setLoading(false)
-      })
-      //.catch((err) => alertContext.error('fail ' + err))
-      .catch((err) => {
-        setError((current) => current || 'Unable to load Docker network information')
-        setLoading(false)
-      })
-  }, []);
+      } else {
+        errors.push('Unable to load the firewall configuration.')
+      }
 
+      if (webpassResult.status === 'fulfilled') {
+        setWebpass(String(webpassResult.value || ''))
+      }
 
-  if (loading) return <Text>Loading...</Text>;
-  if (!interfaceInfo && error) return <Text color="$error500">{error}</Text>;
-  if (!interfaceInfo) return <Text>No information available for {mitmName} interface.</Text>;
+      if (networksResult.status === 'fulfilled') {
+        const network = findMitmNetwork(networksResult.value)
+        const detectedSubnet = network?.IPAM?.Config?.[0]?.Subnet || ''
+        setSubnet(detectedSubnet)
+        setProxyIP(serviceIPFor(detectedSubnet))
+        rule = normalizeRule({
+          ...rule,
+          SrcIP: rule.SrcIP || detectedSubnet
+        })
+      } else {
+        errors.push('Unable to detect the mitmproxy Docker network.')
+      }
 
-  let defaultPolicies = ['wan', 'dns', 'lan', 'api', 'lan_upstream', 'disabled']
-  let defaultGroups = defaultMitmGroups
-  let defaultTags = []
+      setInterfaceInfo(rule)
+      setError(errors.join(' '))
+      setLoading(false)
+    }
 
-  const handleChange = (name, value) => {
-    setInterfaceInfo(prevState => ({
-      ...prevState,
-      [name]: value
-    }));
+    load()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const dirty = useMemo(
+    () =>
+      !previousInterfaceInfo ||
+      JSON.stringify(interfaceInfo) !== JSON.stringify(previousInterfaceInfo),
+    [interfaceInfo, previousInterfaceInfo]
+  )
+
+  const update = (name, value) => {
+    setInterfaceInfo((current) => ({ ...current, [name]: value }))
   }
 
-  const handlePolicies = (policies) => {
-    handleChange('Policies', policies)
-  }
-
-  const handleGroups = (groups) => {
-    handleChange('Groups', groups)
-  }
-
-  const handleTags = (tags) => {
-    handleChange('Tags', tags)
-  }
-
-  const setRecommended = (event) => {
-    event.preventDefault()
-    let newInterfaceInfo = interfaceInfo
-    setInterfaceInfo(prevState => ({
-      ...prevState,
-      SrcIP: subnet,
-      Policies: defaultMitmPolicies,
-      Groups: defaultMitmGroups,
+  const setRecommended = () => {
+    setInterfaceInfo((current) => ({
+      ...current,
+      SrcIP: subnet || current.SrcIP,
+      Policies: [...DEFAULT_POLICIES],
+      Groups: [...DEFAULT_GROUPS],
       Tags: []
-    }));
+    }))
   }
 
-  const handleSubmit = (event) => {
-    event.preventDefault()
+  const readableError = async (err) => {
+    try {
+      const responseText = await err?.response?.text()
+      if (responseText) return responseText
+    } catch (_) {
+      // Fall through to the normalized API error below.
+    }
+    return err?.message
+      ? `Firewall API failure: ${err.message}`
+      : 'Firewall API failure'
+  }
 
-    if (interfaceInfo.SrcIP == '') {
-      setError("Need a SrcIP for the container")
+  const save = async () => {
+    if (!interfaceInfo.SrcIP.trim()) {
+      setError('Configured Source Range is required.')
       return
     }
 
-    const save = () => {
-      setError('')
+    setSaving(true)
+    setError('')
+    try {
+      if (previousInterfaceInfo) {
+        try {
+          await firewallAPI.deleteCustomInterfaceRule(previousInterfaceInfo)
+        } catch (_) {
+          // PUT is authoritative and also repairs stale local rule state.
+        }
+      }
 
-      firewallAPI
-        .addCustomInterfaceRule(interfaceInfo)
-        .then((x) => {
-          setPreviousInterfaceInfo(interfaceInfo)
-        })
-        .catch((err) => {
-          err.response.text().then(t => {
-            setError(t)
-          }).catch(
-            setError("Firewall API Failure")
-          )
-        })
+      await firewallAPI.addCustomInterfaceRule(interfaceInfo)
+      const savedRule = normalizeRule(interfaceInfo)
+      setPreviousInterfaceInfo(savedRule)
+      setInterfaceInfo(savedRule)
+      alert.success('Firewall access saved')
+    } catch (err) {
+      const message = await readableError(err)
+      setError(message)
+      alert.error('Failed to save firewall access', err)
+    } finally {
+      setSaving(false)
     }
-
-    if (previousInterfaceInfo) {
-      firewallAPI
-        .deleteCustomInterfaceRule(previousInterfaceInfo)
-        .then(() => {
-            save()
-        })
-        .catch((err) => {
-          save()
-        })
-    } else {
-      save()
-    }
-
   }
 
+  if (loading) {
+    return (
+      <Card>
+        <Loading text="Loading proxy and firewall configuration..." />
+      </Card>
+    )
+  }
+
+  if (!interfaceInfo) {
+    return (
+      <Card>
+        <EmptyState
+          icon={ServerCrash}
+          title="Configuration unavailable"
+          description={`No information is available for ${MITM_INTERFACE}.`}
+        />
+      </Card>
+    )
+  }
+
+  const tokenQuery = webpass ? `?token=${encodeURIComponent(webpass)}` : ''
+  const adminURL = proxyIP ? `http://${proxyIP}:8082${tokenQuery}` : ''
+  const transparentURL = proxyIP
+    ? `http://${proxyIP}:8081${tokenQuery}`
+    : ''
+  const configured = !!previousInterfaceInfo
+  const ruleStatus = !interfaceInfo.SrcIP
+    ? 'Source range required'
+    : dirty
+      ? configured
+        ? 'Unsaved changes'
+        : 'Ready to save'
+      : 'Configured'
 
   return (
-    <VStack space="md">
-
-      <MitmproxySetupGuide subnetIP={subnetIP} webpass={webpass} />
-
-      <FormControl>
-        <FormControlLabel>
-          <FormControlLabelText>Mitmproxy container network on {mitmName}</FormControlLabelText>
-        </FormControlLabel>
-      </FormControl>
-
-      <FormControl>
-        <FormControlLabel>
-          <FormControlLabelText>Docker's Address Range</FormControlLabelText>
-        </FormControlLabel>
-        <FormControlHelper>
-          <FormControlHelperText>
-            {subnet}
-          </FormControlHelperText>
-        </FormControlHelper>
-      </FormControl>
-
-      <FormControl isRequired>
-        <FormControlLabel>
-          <FormControlLabelText>Configured Source Range</FormControlLabelText>
-        </FormControlLabel>
-        <FormControlHelper>
-          <Input size="md" variant="underlined">
-            <InputField
-              variant="underlined"
-              value={interfaceInfo.SrcIP}
-              onChangeText={(value) => handleChange('SrcIP', value)}
+    <>
+      <Card>
+        <SectionHeader
+          title="Proxy access"
+          right={<StatusDot online={!!subnet} warn={!subnet} />}
+        />
+        <VStack space="md">
+          <HStack flexWrap="wrap" gap="$2">
+            <StatTile
+              label="Container network"
+              value={subnet || 'Not detected'}
+              mono
             />
-          </Input>
-        </FormControlHelper>
-      </FormControl>
+            <StatTile
+              label="HTTP proxy"
+              value={proxyIP ? `${proxyIP}:9998` : 'Unavailable'}
+              mono
+            />
+            <StatTile
+              label="Transparent proxy"
+              value={proxyIP ? `${proxyIP}:9999` : 'Unavailable'}
+              mono
+            />
+          </HStack>
+          <HStack space="lg" flexWrap="wrap" alignItems="center">
+            <EndpointLink href={adminURL}>Open HTTP proxy interface</EndpointLink>
+            <EndpointLink href={transparentURL}>
+              Open transparent proxy interface
+            </EndpointLink>
+          </HStack>
+        </VStack>
+      </Card>
 
-      <FormControl>
-        <FormControlLabel>
-          <FormControlLabelText>Network Policies, Groups, & Tags</FormControlLabelText>
-        </FormControlLabel>
-        <FormControlHelper>
-          <FormControlHelperText>
-            Network policies and groups control network access for the {mitmName} interface
-          </FormControlHelperText>
-        </FormControlHelper>
-        <HStack flexWrap="wrap" w="$full" space="md">
-          <HStack space="md" flexWrap="wrap" alignItems="center">
-            {interfaceInfo.Policies.map((policy) => (
-              <PolicyItem key={policy} name={policy} size="sm" />
-            ))}
-          </HStack>
-          <HStack space="md" flexWrap="wrap" alignItems="center">
-            {interfaceInfo.Groups.map((group) => (
-              <GroupItem key={group} name={group} size="sm" />
-            ))}
-          </HStack>
-          <HStack space="md" flexWrap="wrap" alignItems="center">
-            {interfaceInfo.Tags.map((tag) => (
-              <TagItem key={tag} name={tag} size="sm" />
-            ))}
-          </HStack>
-        </HStack>
-        <HStack space="md" flexWrap="wrap" alignItems="center">
-          <PolicyMenu
-            items={[
-              ...new Set(defaultPolicies)
-            ]}
-            selectedKeys={interfaceInfo.Policies}
-            onSelectionChange={handlePolicies}
+      <Card>
+        <SectionHeader
+          title="Firewall access"
+          right={
+            <Badge
+              action={!interfaceInfo.SrcIP ? 'error' : dirty ? 'warning' : 'success'}
+              variant="outline"
+              borderRadius="$full"
+            >
+              <BadgeText>{ruleStatus}</BadgeText>
+            </Badge>
+          }
+        />
+        <VStack space="lg">
+          <ErrorNotice message={error} />
+
+          <TextField
+            label="Configured Source Range"
+            value={interfaceInfo.SrcIP}
+            onChangeText={(value) => update('SrcIP', value)}
+            placeholder="172.22.0.0/16"
+            helper={`Traffic arriving from ${MITM_INTERFACE} is matched against this CIDR range.`}
+            error={!interfaceInfo.SrcIP ? 'Enter the mitmproxy container subnet.' : ''}
           />
 
-          <GroupMenu
-            items={[
-              ...new Set(defaultGroups)
-            ]}
-            selectedKeys={interfaceInfo.Groups}
-            onSelectionChange={handleGroups}
-          />
+          <VStack space="xs">
+            <KeyVal label="Docker address range" value={subnet || 'Not detected'} mono />
+            <KeyVal label="Bridge interface" value={MITM_INTERFACE} mono />
+          </VStack>
 
-          <TagMenu
-            items={[
-              ...new Set(defaultTags)
-            ]}
-            selectedKeys={interfaceInfo.Tags}
-            onSelectionChange={handleTags}
-          />
-        </HStack>
+          <Box
+            pt="$4"
+            borderTopWidth={1}
+            borderColor="$borderColorCardLight"
+            sx={{ _dark: { borderColor: '$borderColorCardDark' } }}
+          >
+            <VStack space="md">
+              <VStack space="xs">
+                <Heading
+                  size="sm"
+                  color="$textLight900"
+                  sx={{ _dark: { color: '$textDark50' } }}
+                >
+                  Network policies, groups, and tags
+                </Heading>
+                <Text size="sm" color="$muted500">
+                  These controls define what the proxy network can reach and which
+                  clients can connect to it.
+                </Text>
+              </VStack>
 
-      </FormControl>
+              <HStack flexWrap="wrap" gap="$2" alignItems="center">
+                {interfaceInfo.Policies.map((policy) => (
+                  <PolicyItem key={policy} name={policy} size="sm" />
+                ))}
+                {interfaceInfo.Groups.map((group) => (
+                  <GroupItem key={group} name={group} size="sm" />
+                ))}
+                {interfaceInfo.Tags.map((tag) => (
+                  <TagItem key={tag} name={tag} size="sm" />
+                ))}
+              </HStack>
 
-      <Button action="secondary" size="md" onPress={setRecommended}>
-        <ButtonText>Set Recommended</ButtonText>
-      </Button>
-      <Button action="primary" size="md" onPress={handleSubmit}>
-        <ButtonText>Save</ButtonText>
-      </Button>
-      <Text color="$error500">{error}</Text>
-    </VStack>
-  );
-};
+              <HStack space="sm" flexWrap="wrap" alignItems="center">
+                <PolicyMenu
+                  items={[...new Set(AVAILABLE_POLICIES)]}
+                  selectedKeys={interfaceInfo.Policies}
+                  onSelectionChange={(value) => update('Policies', value)}
+                />
+                <GroupMenu
+                  items={[...new Set(DEFAULT_GROUPS)]}
+                  selectedKeys={interfaceInfo.Groups}
+                  onSelectionChange={(value) => update('Groups', value)}
+                />
+                <TagMenu
+                  items={[]}
+                  selectedKeys={interfaceInfo.Tags}
+                  onSelectionChange={(value) => update('Tags', value)}
+                />
+              </HStack>
+            </VStack>
+          </Box>
 
-export default InterfaceInfo;
+          <HStack justifyContent="flex-end" space="sm" flexWrap="wrap">
+            <Button
+              action="secondary"
+              variant="outline"
+              size="sm"
+              isDisabled={saving}
+              onPress={setRecommended}
+            >
+              <ButtonIcon as={RotateCcw} mr="$2" />
+              <ButtonText>Use recommended</ButtonText>
+            </Button>
+            <Button
+              action="primary"
+              size="sm"
+              isDisabled={saving || !dirty || !interfaceInfo.SrcIP}
+              onPress={save}
+            >
+              <ButtonIcon as={Save} mr="$2" />
+              <ButtonText>{saving ? 'Saving...' : 'Save firewall access'}</ButtonText>
+            </Button>
+          </HStack>
+        </VStack>
+      </Card>
+
+      <SetupGuide hasPFW={hasPFW} proxyIP={proxyIP} />
+    </>
+  )
+}
