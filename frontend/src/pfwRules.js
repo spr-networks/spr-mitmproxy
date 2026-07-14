@@ -83,6 +83,19 @@ export const matchesQuicBlockRule = (rule) =>
   rule?.Dst?.IP === '0.0.0.0/0' &&
   String(rule?.DstPort || '') === '443'
 
+const isSupportedRouteToProxy = (rule) =>
+  String(rule?.Protocol || '').toLowerCase() === 'tcp' &&
+  ['80', '443'].includes(String(rule?.OriginalDstPort || '')) &&
+  !rule?.DstPort
+
+// mitmweb0 terminates transparent HTTP(S); it is deliberately not a general
+// routed site. Any other active forwarding rule to it can black-hole traffic
+// or, with older containers, create a host/container routing loop.
+export const isConflictingProxyRoute = (rule) =>
+  !rule?.Disabled &&
+  rule?.DstInterface === TRANSPARENT_ROUTE_INTERFACE &&
+  !isSupportedRouteToProxy(rule)
+
 export const transparentForwardingState = (config, proxyIP) => {
   const rules = Array.isArray(config?.ForwardingRules)
     ? config.ForwardingRules
@@ -106,13 +119,21 @@ export const transparentForwardingState = (config, proxyIP) => {
   const managedBlockRulesValid = managedBlockIndexes.every((index) =>
     matchesQuicBlockRule(blockRules[index])
   )
+  const conflictingIndexes = rules
+    .map((rule, index) =>
+      isConflictingProxyRoute(rule) && !isManagedTransparentRule(rule)
+        ? index
+        : -1
+    )
+    .filter((index) => index >= 0)
   const managedCount = managedIndexes.length + managedBlockIndexes.length
-  const configured =
+  const desiredConfigurationPresent =
     !!proxyIP &&
     desiredRulesPresent &&
     managedRulesValid &&
     blockMatchingIndex >= 0 &&
     managedBlockRulesValid
+  const hasConflicts = conflictingIndexes.length > 0
 
   return {
     desired,
@@ -122,10 +143,13 @@ export const transparentForwardingState = (config, proxyIP) => {
     managedBlockIndexes,
     blockMatchingIndex,
     managedCount,
-    configured,
+    conflictingIndexes,
+    conflictingRules: conflictingIndexes.map((index) => rules[index]),
+    hasConflicts,
+    configured: desiredConfigurationPresent && !hasConflicts,
     needsRepair:
       !!proxyIP &&
       managedCount > 0 &&
-      !configured
+      !desiredConfigurationPresent
   }
 }

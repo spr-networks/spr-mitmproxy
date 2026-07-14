@@ -413,13 +413,15 @@ const TransparentForwarding = ({ hasPFW, proxyIP }) => {
 
   const status = !proxyIP
     ? 'Proxy unavailable'
-    : state.configured
-      ? 'Configured'
-      : state.needsRepair
-        ? 'Repair required'
-        : 'Not configured'
+    : state.hasConflicts
+      ? 'PFW conflict'
+      : state.configured
+        ? 'Configured'
+        : state.needsRepair
+          ? 'Repair required'
+          : 'Not configured'
   const statusAction =
-    !proxyIP || state.needsRepair
+    !proxyIP || state.needsRepair || state.hasConflicts
       ? 'error'
       : state.configured
         ? 'success'
@@ -444,6 +446,16 @@ const TransparentForwarding = ({ hasPFW, proxyIP }) => {
       ) : (
         <VStack space="lg">
           <ErrorNotice message={error} />
+
+          <ErrorNotice
+            message={
+              state.hasConflicts
+                ? `PFW has additional forwarding to ${TRANSPARENT_ROUTE_INTERFACE} outside TCP ports 80 and 443 (${state.conflictingRules
+                    .map((rule, index) => rule?.RuleName || `rule ${index + 1}`)
+                    .join(', ')}). Remove those broad rules in PFW; this container is not a general routed site.`
+                : ''
+            }
+          />
 
           <Text size="sm" color="$muted500">
             PFW sends web traffic through mitmproxy only for devices carrying
@@ -512,6 +524,13 @@ const TransparentForwarding = ({ hasPFW, proxyIP }) => {
             fall back to intercepted HTTPS over TCP.
           </Text>
 
+          <Text size="xs" color="$muted500">
+            Tagged-device flows appear in the transparent proxy interface on
+            port 8081, not the regular HTTP proxy interface on port 8082.
+            HTTPS devices must fully trust the CA from http://mitm.it;
+            certificate-pinned apps may still reject interception.
+          </Text>
+
           {state.configured && state.managedCount === 0 ? (
             <Text size="xs" color="$muted500">
               Equivalent PFW rules already exist. They were left under their
@@ -535,13 +554,26 @@ const TransparentForwarding = ({ hasPFW, proxyIP }) => {
             <Button
               action="primary"
               size="sm"
-              isDisabled={saving || !proxyIP || state.configured}
+              isDisabled={
+                saving || !proxyIP || state.configured || state.hasConflicts
+              }
               onPress={enable}
             >
-              <ButtonIcon as={state.needsRepair ? RotateCcw : Route} mr="$2" />
+              <ButtonIcon
+                as={
+                  state.hasConflicts
+                    ? AlertCircle
+                    : state.needsRepair
+                      ? RotateCcw
+                      : Route
+                }
+                mr="$2"
+              />
               <ButtonText>
                 {saving
                   ? 'Saving...'
+                  : state.hasConflicts
+                    ? 'Remove conflicting PFW rules'
                   : state.needsRepair
                     ? 'Repair PFW rules'
                     : state.configured

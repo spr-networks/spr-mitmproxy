@@ -2,6 +2,7 @@ import {
   TRANSPARENT_CLIENT_TAG,
   TRANSPARENT_PROXY_PORT,
   TRANSPARENT_ROUTE_INTERFACE,
+  isConflictingProxyRoute,
   matchesQuicBlockRule,
   matchesTransparentRule,
   transparentForwardingState,
@@ -134,6 +135,36 @@ describe('mitmproxy PFW rules', () => {
     expect(state.configured).toBe(false)
     expect(state.needsRepair).toBe(true)
     expect(state.managedCount).toBe(2)
+  })
+
+  test('rejects a broad all-port route to the proxy interface', () => {
+    const broadRoute = {
+      RuleName: 'Route everything through mitmproxy',
+      Client: { SrcIP: '192.168.2.214' },
+      Protocol: '',
+      OriginalDst: { IP: '0.0.0.0/0' },
+      OriginalDstPort: '',
+      Dst: { IP: '172.23.0.2' },
+      DstPort: '',
+      DstInterface: TRANSPARENT_ROUTE_INTERFACE,
+      Disabled: false
+    }
+    const state = transparentForwardingState(
+      {
+        ForwardingRules: [
+          ...transparentRulesFor('172.23.0.2'),
+          broadRoute
+        ],
+        BlockRules: [externalQuicBlock()]
+      },
+      '172.23.0.2'
+    )
+
+    expect(isConflictingProxyRoute(broadRoute)).toBe(true)
+    expect(state.hasConflicts).toBe(true)
+    expect(state.configured).toBe(false)
+    expect(state.needsRepair).toBe(false)
+    expect(state.conflictingRules).toEqual([broadRoute])
   })
 
   test('does not treat disabled or scheduled rules as active', () => {

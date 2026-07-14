@@ -1,10 +1,19 @@
 #!/bin/bash
 
+set -euo pipefail
+
 nft -f - << EOF
-table inet nat {
+table inet mitmproxy {
         chain prerouting {
-                type nat hook prerouting priority filter; policy accept;
-                tcp dport { 80, 443 } dnat ip to 127.0.0.1:9999
+                type nat hook prerouting priority dstnat; policy accept;
+                tcp dport { 80, 443 } redirect to :9999
+        }
+
+        # This container is a transparent-proxy endpoint, never a router. If a
+        # packet cannot be redirected (for example an invalid late TCP packet),
+        # dropping it here prevents it from looping back through the SPR host.
+        chain forward {
+                type filter hook forward priority filter; policy drop;
         }
 }
 EOF

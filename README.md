@@ -42,6 +42,12 @@ Mitmproxy transparent mode is TCP-only. The managed setup also blocks UDP port
 443 for tagged devices so browsers fall back from QUIC/HTTP/3 to intercepted
 HTTPS over TCP. DNS continues to use the device's normal SPR DNS path.
 
+The container terminates policy-routed traffic locally and is not an IP
+forwarder. Packets that cannot be redirected to the transparent listener are
+dropped in the container so they cannot loop back through the SPR host.
+The plugin UI also reports a PFW conflict if any enabled forwarding rule sends
+ports other than TCP 80/443 to `mitmweb0`.
+
 <img width="1444" alt="image" src="https://github.com/user-attachments/assets/ade223fa-e124-4128-94d5-7bfd5d83f8f2">
 
 - Optionally visit http://mitm.it and install the mitmproxy certificate to the trust store
