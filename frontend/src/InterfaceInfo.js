@@ -26,14 +26,24 @@ import {
 import {
   AlertCircle,
   ExternalLink,
+  Route,
   RotateCcw,
   Save,
-  ServerCrash
+  ServerCrash,
+  Trash2
 } from 'lucide-react-native'
 
 import { api, firewallAPI } from './api/index.js'
 import { GroupItem, PolicyItem, TagItem } from './components/TagItem.js'
 import { GroupMenu, PolicyMenu, TagMenu } from './components/TagMenu.js'
+import {
+  TRANSPARENT_CLIENT_GROUP,
+  TRANSPARENT_PROXY_PORT,
+  isManagedTransparentRule,
+  matchesTransparentRule,
+  transparentForwardingState,
+  transparentRulesFor
+} from './pfwRules.js'
 
 const MITM_INTERFACE = 'mitmweb0'
 const DEFAULT_POLICIES = ['dns', 'wan']
@@ -168,7 +178,7 @@ const SetupGuide = ({ hasPFW, proxyIP }) => (
       </Step>
       <Step number="4" title="Forward traffic automatically (optional)">
         {hasPFW
-          ? `PFW is available. Point a forwarding rule at ${proxyIP || 'the proxy'}:9999; ports 80 and 443 are translated automatically.`
+          ? 'PFW is available. Use the Transparent forwarding card to install both required rules automatically.'
           : 'Transparent forwarding and domain-based matching require the PLUS PFW extension.'}
       </Step>
       {!hasPFW ? (
@@ -225,6 +235,261 @@ const ErrorNotice = ({ message }) =>
       </Text>
     </HStack>
   ) : null
+
+const TransparentForwarding = ({ hasPFW, proxyIP }) => {
+  const alert = useAlert()
+  const [config, setConfig] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const load = async () => {
+    if (!hasPFW) return
+
+    setLoading(true)
+    setError('')
+    try {
+      setConfig(await api.get('/plugins/pfw/config'))
+    } catch (err) {
+      setError('PFW is installed, but its forwarding rules could not be loaded.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    let active = true
+
+    if (!hasPFW) {
+      setConfig(null)
+      return () => {
+        active = false
+      }
+    }
+
+    setLoading(true)
+    setError('')
+    api
+      .get('/plugins/pfw/config')
+      .then((result) => active && setConfig(result))
+      .catch(
+        () =>
+          active &&
+          setError('PFW is installed, but its forwarding rules could not be loaded.')
+      )
+      .finally(() => active && setLoading(false))
+
+    return () => {
+      active = false
+    }
+  }, [hasPFW])
+
+  const state = useMemo(
+    () => transparentForwardingState(config, proxyIP),
+    [config, proxyIP]
+  )
+
+  if (!hasPFW) return null
+
+  const readableError = async (err) => {
+    try {
+      const responseText = await err?.response?.text()
+      if (responseText) return responseText
+    } catch (_) {
+      // Use the normalized message below.
+    }
+    return err?.message
+      ? `PFW API failure: ${err.message}`
+      : 'PFW API failure'
+  }
+
+  const enable = async () => {
+    if (!proxyIP) {
+      setError('The mitmproxy container IP must be detected first.')
+      return
+    }
+
+    setSaving(true)
+    setError('')
+    try {
+      const current = await api.get('/plugins/pfw/config')
+      const existing = Array.isArray(current?.ForwardingRules)
+        ? current.ForwardingRules
+        : []
+
+      for (const desired of transparentRulesFor(proxyIP)) {
+        const managedIndexes = existing
+          .map((rule, index) =>
+            rule?.RuleName === desired.RuleName ? index : -1
+          )
+          .filter((index) => index >= 0)
+
+        if (managedIndexes.length > 0) {
+          for (const index of managedIndexes) {
+            if (!matchesTransparentRule(existing[index], desired)) {
+              await api.put(`/plugins/pfw/forward/${index}`, desired)
+            }
+          }
+          continue
+        }
+
+        if (!existing.some((rule) => matchesTransparentRule(rule, desired))) {
+          await api.put('/plugins/pfw/forward', desired)
+        }
+      }
+
+      await load()
+      alert.success('Transparent forwarding enabled')
+    } catch (err) {
+      const message = await readableError(err)
+      setError(message)
+      alert.error('Failed to configure transparent forwarding', err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const remove = async () => {
+    setSaving(true)
+    setError('')
+    try {
+      const current = await api.get('/plugins/pfw/config')
+      const managedIndexes = (current?.ForwardingRules || [])
+        .map((rule, index) => (isManagedTransparentRule(rule) ? index : -1))
+        .filter((index) => index >= 0)
+        .sort((a, b) => b - a)
+
+      for (const index of managedIndexes) {
+        await api.delete(`/plugins/pfw/forward/${index}`, {})
+      }
+
+      await load()
+      alert.success('Managed transparent forwarding removed')
+    } catch (err) {
+      const message = await readableError(err)
+      setError(message)
+      alert.error('Failed to remove transparent forwarding', err)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const status = !proxyIP
+    ? 'Proxy unavailable'
+    : state.configured
+      ? 'Configured'
+      : state.needsRepair
+        ? 'Repair required'
+        : 'Not configured'
+  const statusAction =
+    !proxyIP || state.needsRepair
+      ? 'error'
+      : state.configured
+        ? 'success'
+        : 'muted'
+
+  return (
+    <Card>
+      <SectionHeader
+        title="Transparent forwarding"
+        right={
+          <Badge
+            action={statusAction}
+            variant="outline"
+            borderRadius="$full"
+          >
+            <BadgeText>{status}</BadgeText>
+          </Badge>
+        }
+      />
+      {loading && !config ? (
+        <Loading text="Checking PFW forwarding rules..." />
+      ) : (
+        <VStack space="lg">
+          <ErrorNotice message={error} />
+
+          <Text size="sm" color="$muted500">
+            One click sends web traffic from devices in the {TRANSPARENT_CLIENT_GROUP}{' '}
+            group through mitmproxy. Other devices and non-web ports are unchanged.
+          </Text>
+
+          <VStack space="sm">
+            {['80', '443'].map((port) => (
+              <HStack
+                key={port}
+                px="$4"
+                py="$3"
+                borderRadius="$xl"
+                borderWidth={1}
+                borderColor="$borderColorCardLight"
+                bg="$backgroundContentLight"
+                alignItems="center"
+                justifyContent="space-between"
+                flexWrap="wrap"
+                gap="$2"
+                sx={{
+                  _dark: {
+                    bg: '$backgroundContentDark',
+                    borderColor: '$borderColorCardDark'
+                  }
+                }}
+              >
+                <HStack space="sm" alignItems="center">
+                  <Icon as={Route} size="sm" color="$primary600" />
+                  <Text size="sm" fontWeight="$semibold">
+                    {TRANSPARENT_CLIENT_GROUP} - TCP port {port}
+                  </Text>
+                </HStack>
+                <Text size="sm" color="$muted500" fontFamily="$mono">
+                  {proxyIP || 'proxy'}:{TRANSPARENT_PROXY_PORT}
+                </Text>
+              </HStack>
+            ))}
+          </VStack>
+
+          {state.configured && state.managedCount === 0 ? (
+            <Text size="xs" color="$muted500">
+              Equivalent PFW rules already exist. They were left under their
+              existing names and will not be removed by this plugin.
+            </Text>
+          ) : null}
+
+          <HStack justifyContent="flex-end" space="sm" flexWrap="wrap">
+            {state.managedCount > 0 ? (
+              <Button
+                action="secondary"
+                variant="outline"
+                size="sm"
+                isDisabled={saving}
+                onPress={remove}
+              >
+                <ButtonIcon as={Trash2} mr="$2" />
+                <ButtonText>Remove managed rules</ButtonText>
+              </Button>
+            ) : null}
+            <Button
+              action="primary"
+              size="sm"
+              isDisabled={saving || !proxyIP || state.configured}
+              onPress={enable}
+            >
+              <ButtonIcon as={state.needsRepair ? RotateCcw : Route} mr="$2" />
+              <ButtonText>
+                {saving
+                  ? 'Saving...'
+                  : state.needsRepair
+                    ? 'Repair PFW rules'
+                    : state.configured
+                      ? 'Transparent forwarding enabled'
+                      : 'Enable transparent forwarding'}
+              </ButtonText>
+            </Button>
+          </HStack>
+        </VStack>
+      )}
+    </Card>
+  )
+}
 
 export default function InterfaceInfo({ hasPFW }) {
   const alert = useAlert()
@@ -564,6 +829,8 @@ export default function InterfaceInfo({ hasPFW }) {
           </HStack>
         </VStack>
       </Card>
+
+      <TransparentForwarding hasPFW={hasPFW} proxyIP={proxyIP} />
 
       <SetupGuide hasPFW={hasPFW} proxyIP={proxyIP} />
     </>
