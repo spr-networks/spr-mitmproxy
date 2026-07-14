@@ -1,5 +1,5 @@
 import {
-  TRANSPARENT_CLIENT_GROUP,
+  TRANSPARENT_CLIENT_TAG,
   TRANSPARENT_PROXY_PORT,
   matchesTransparentRule,
   transparentForwardingState,
@@ -13,7 +13,7 @@ describe('mitmproxy PFW rules', () => {
     expect(rules).toHaveLength(2)
     expect(rules.map((rule) => rule.OriginalDstPort)).toEqual(['80', '443'])
     rules.forEach((rule) => {
-      expect(rule.Client.Group).toBe(TRANSPARENT_CLIENT_GROUP)
+      expect(rule.Client).toEqual({ Tag: TRANSPARENT_CLIENT_TAG })
       expect(rule.OriginalDst.IP).toBe('0.0.0.0/0')
       expect(rule.Dst).toEqual({ IP: '172.23.0.2' })
       expect(rule.DstPort).toBe(TRANSPARENT_PROXY_PORT)
@@ -51,6 +51,21 @@ describe('mitmproxy PFW rules', () => {
     expect(state.managedCount).toBe(2)
   })
 
+  test('marks legacy group-based managed rules for repair', () => {
+    const legacy = transparentRulesFor('172.23.0.2').map((rule) => ({
+      ...rule,
+      Client: { Group: 'mitmweb' }
+    }))
+    const state = transparentForwardingState(
+      { ForwardingRules: legacy },
+      '172.23.0.2'
+    )
+
+    expect(state.configured).toBe(false)
+    expect(state.needsRepair).toBe(true)
+    expect(state.managedCount).toBe(2)
+  })
+
   test('repairs stale managed rules even when equivalent external rules exist', () => {
     const desired = transparentRulesFor('172.23.0.2')
     const staleManaged = {
@@ -79,6 +94,20 @@ describe('mitmproxy PFW rules', () => {
     expect(
       matchesTransparentRule(
         { ...desired, Time: { Start: '09:00', End: '17:00' } },
+        desired
+      )
+    ).toBe(false)
+  })
+
+  test('does not accept a rule that combines the tag with another selector', () => {
+    const [desired] = transparentRulesFor('172.23.0.2')
+
+    expect(
+      matchesTransparentRule(
+        {
+          ...desired,
+          Client: { Tag: TRANSPARENT_CLIENT_TAG, Group: 'mitmweb' }
+        },
         desired
       )
     ).toBe(false)

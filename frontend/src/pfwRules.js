@@ -1,5 +1,5 @@
 export const TRANSPARENT_PROXY_PORT = '9999'
-export const TRANSPARENT_CLIENT_GROUP = 'mitmweb'
+export const TRANSPARENT_CLIENT_TAG = 'mitmproxy'
 
 const PORTS = [
   { name: 'mitmproxy: transparent HTTP', port: '80' },
@@ -11,7 +11,7 @@ const hostIP = (address) => String(address || '').trim().replace(/\/32$/, '')
 export const transparentRulesFor = (proxyIP) =>
   PORTS.map(({ name, port }) => ({
     RuleName: name,
-    Client: { Group: TRANSPARENT_CLIENT_GROUP },
+    Client: { Tag: TRANSPARENT_CLIENT_TAG },
     Protocol: 'tcp',
     OriginalDst: { IP: '0.0.0.0/0' },
     OriginalDstPort: port,
@@ -33,12 +33,17 @@ export const matchesTransparentRule = (rule, desired) => {
     rule?.Time?.CronExpr ||
     rule?.Time?.Start ||
     rule?.Time?.End
+  const client = rule?.Client || {}
 
   return (
     !rule?.Disabled &&
     !scheduled &&
     String(rule?.Protocol || '').toLowerCase() === 'tcp' &&
-    rule?.Client?.Group === TRANSPARENT_CLIENT_GROUP &&
+    client.Tag === TRANSPARENT_CLIENT_TAG &&
+    !client.Group &&
+    !client.Identity &&
+    !client.SrcIP &&
+    !client.Endpoint &&
     rule?.OriginalDst?.IP === '0.0.0.0/0' &&
     String(rule?.OriginalDstPort || '') === desired.OriginalDstPort &&
     hostIP(rule?.Dst?.IP) === hostIP(desired.Dst.IP) &&

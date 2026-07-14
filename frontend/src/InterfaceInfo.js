@@ -37,7 +37,7 @@ import { api, firewallAPI } from './api/index.js'
 import { GroupItem, PolicyItem, TagItem } from './components/TagItem.js'
 import { GroupMenu, PolicyMenu, TagMenu } from './components/TagMenu.js'
 import {
-  TRANSPARENT_CLIENT_GROUP,
+  TRANSPARENT_CLIENT_TAG,
   TRANSPARENT_PROXY_PORT,
   isManagedTransparentRule,
   matchesTransparentRule,
@@ -170,7 +170,8 @@ const SetupGuide = ({ hasPFW, proxyIP }) => (
       </Step>
       <Step number="2" title="Grant device access">
         Add client devices to the mitmweb group so they can reach the proxy and
-        its administration interface.
+        its administration interface. Group membership does not enable
+        transparent interception.
       </Step>
       <Step number="3" title="Configure the HTTP proxy">
         Set the client proxy to {proxyIP ? `${proxyIP}:9998` : 'the address shown above'},
@@ -178,7 +179,7 @@ const SetupGuide = ({ hasPFW, proxyIP }) => (
       </Step>
       <Step number="4" title="Forward traffic automatically (optional)">
         {hasPFW
-          ? 'PFW is available. Use the Transparent forwarding card to install both required rules automatically.'
+          ? `Add the ${TRANSPARENT_CLIENT_TAG} tag only to devices you want intercepted, then use the Transparent forwarding card to install the tag-based rules.`
           : 'Transparent forwarding and domain-based matching require the PLUS PFW extension.'}
       </Step>
       {!hasPFW ? (
@@ -339,7 +340,7 @@ const TransparentForwarding = ({ hasPFW, proxyIP }) => {
       }
 
       await load()
-      alert.success('Transparent forwarding enabled')
+      alert.success('Tag-based transparent forwarding enabled')
     } catch (err) {
       const message = await readableError(err)
       setError(message)
@@ -409,8 +410,9 @@ const TransparentForwarding = ({ hasPFW, proxyIP }) => {
           <ErrorNotice message={error} />
 
           <Text size="sm" color="$muted500">
-            One click sends web traffic from devices in the {TRANSPARENT_CLIENT_GROUP}{' '}
-            group through mitmproxy. Other devices and non-web ports are unchanged.
+            PFW sends web traffic through mitmproxy only for devices carrying
+            the {TRANSPARENT_CLIENT_TAG} tag. The mitmweb group grants proxy
+            access but does not opt a device into interception.
           </Text>
 
           <VStack space="sm">
@@ -437,7 +439,7 @@ const TransparentForwarding = ({ hasPFW, proxyIP }) => {
                 <HStack space="sm" alignItems="center">
                   <Icon as={Route} size="sm" color="$primary600" />
                   <Text size="sm" fontWeight="$semibold">
-                    {TRANSPARENT_CLIENT_GROUP} - TCP port {port}
+                    {TRANSPARENT_CLIENT_TAG} tag - TCP port {port}
                   </Text>
                 </HStack>
                 <Text size="sm" color="$muted500" fontFamily="$mono">
@@ -486,8 +488,8 @@ const TransparentForwarding = ({ hasPFW, proxyIP }) => {
                   : state.needsRepair
                     ? 'Repair PFW rules'
                     : state.configured
-                      ? 'Transparent forwarding enabled'
-                      : 'Enable transparent forwarding'}
+                      ? 'Tag-based forwarding configured'
+                      : 'Create tag-based PFW rules'}
               </ButtonText>
             </Button>
           </HStack>
