@@ -11,8 +11,8 @@ Copy this repository [https://github.com/spr-networks/spr-mitmproxy](https://git
 <img width="1256" alt="image" src="https://github.com/user-attachments/assets/c12c5909-cfd0-4f02-8e5d-a232dac6fb24">
 
 ### Configure the Plugin
+<img width="1485" height="1048" alt="image" src="https://github.com/user-attachments/assets/bb4fb2a1-9b46-4c8b-a00a-90ed613a6e8d" />
 
-<img width="1068" alt="image" src="https://github.com/user-attachments/assets/4c31342f-3ce3-404b-ad4c-546e422d07b2">
 
 ### Add your device to the mitmweb group 
 
