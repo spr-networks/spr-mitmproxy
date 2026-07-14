@@ -38,6 +38,10 @@ destination while routing the traffic through the mitmproxy container; the
 container performs the local redirect to its transparent listener. The
 `mitmweb` access group is not used as the interception selector.
 
+Mitmproxy transparent mode is TCP-only. The managed setup also blocks UDP port
+443 for tagged devices so browsers fall back from QUIC/HTTP/3 to intercepted
+HTTPS over TCP. DNS continues to use the device's normal SPR DNS path.
+
 <img width="1444" alt="image" src="https://github.com/user-attachments/assets/ade223fa-e124-4128-94d5-7bfd5d83f8f2">
 
 - Optionally visit http://mitm.it and install the mitmproxy certificate to the trust store

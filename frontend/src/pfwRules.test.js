@@ -2,10 +2,22 @@ import {
   TRANSPARENT_CLIENT_TAG,
   TRANSPARENT_PROXY_PORT,
   TRANSPARENT_ROUTE_INTERFACE,
+  matchesQuicBlockRule,
   matchesTransparentRule,
   transparentForwardingState,
+  transparentQuicBlockRule,
   transparentRulesFor
 } from './pfwRules.js'
+
+const externalQuicBlock = () => ({
+  ...transparentQuicBlockRule(),
+  RuleName: 'Existing QUIC block'
+})
+
+const configWithBlock = (ForwardingRules) => ({
+  ForwardingRules,
+  BlockRules: [externalQuicBlock()]
+})
 
 describe('mitmproxy PFW rules', () => {
   test('builds separate HTTP and HTTPS rules for the transparent listener', () => {
@@ -22,6 +34,16 @@ describe('mitmproxy PFW rules', () => {
     })
   })
 
+  test('builds a UDP 443 block so QUIC falls back to intercepted TCP', () => {
+    const block = transparentQuicBlockRule()
+
+    expect(block.Client).toEqual({ Tag: TRANSPARENT_CLIENT_TAG })
+    expect(block.Protocol).toBe('udp')
+    expect(block.Dst).toEqual({ IP: '0.0.0.0/0' })
+    expect(block.DstPort).toBe('443')
+    expect(matchesQuicBlockRule(block)).toBe(true)
+  })
+
   test('recognizes equivalent user-created rules without taking ownership', () => {
     const desired = transparentRulesFor('172.23.0.2')
     const external = desired.map((rule, index) => ({
@@ -30,7 +52,7 @@ describe('mitmproxy PFW rules', () => {
       Time: { Start: '', End: '', CronExpr: '' }
     }))
     const state = transparentForwardingState(
-      { ForwardingRules: external },
+      configWithBlock(external),
       '172.23.0.2'
     )
 
@@ -44,7 +66,7 @@ describe('mitmproxy PFW rules', () => {
       Dst: { IP: '172.23.0.3' }
     }))
     const state = transparentForwardingState(
-      { ForwardingRules: stale },
+      configWithBlock(stale),
       '172.23.0.2'
     )
 
@@ -60,7 +82,7 @@ describe('mitmproxy PFW rules', () => {
       DstInterface: ''
     }))
     const state = transparentForwardingState(
-      { ForwardingRules: legacy },
+      configWithBlock(legacy),
       '172.23.0.2'
     )
 
@@ -75,7 +97,7 @@ describe('mitmproxy PFW rules', () => {
       Client: { Group: 'mitmweb' }
     }))
     const state = transparentForwardingState(
-      { ForwardingRules: legacy },
+      configWithBlock(legacy),
       '172.23.0.2'
     )
 
@@ -95,12 +117,23 @@ describe('mitmproxy PFW rules', () => {
       RuleName: `External ${index}`
     }))
     const state = transparentForwardingState(
-      { ForwardingRules: [staleManaged, ...external] },
+      configWithBlock([staleManaged, ...external]),
       '172.23.0.2'
     )
 
     expect(state.configured).toBe(false)
     expect(state.needsRepair).toBe(true)
+  })
+
+  test('requires the QUIC block when managed forwarding is present', () => {
+    const state = transparentForwardingState(
+      { ForwardingRules: transparentRulesFor('172.23.0.2') },
+      '172.23.0.2'
+    )
+
+    expect(state.configured).toBe(false)
+    expect(state.needsRepair).toBe(true)
+    expect(state.managedCount).toBe(2)
   })
 
   test('does not treat disabled or scheduled rules as active', () => {
@@ -128,6 +161,12 @@ describe('mitmproxy PFW rules', () => {
         },
         desired
       )
+    ).toBe(false)
+    expect(
+      matchesQuicBlockRule({
+        ...transparentQuicBlockRule(),
+        Client: { Tag: TRANSPARENT_CLIENT_TAG, Group: 'mitmweb' }
+      })
     ).toBe(false)
   })
 })

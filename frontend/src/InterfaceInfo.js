@@ -25,6 +25,7 @@ import {
 } from '@spr-networks/plugin-ui'
 import {
   AlertCircle,
+  Ban,
   ExternalLink,
   Route,
   RotateCcw,
@@ -40,8 +41,11 @@ import {
   TRANSPARENT_CLIENT_TAG,
   TRANSPARENT_PROXY_PORT,
   TRANSPARENT_ROUTE_INTERFACE,
+  isManagedQuicBlockRule,
   isManagedTransparentRule,
+  matchesQuicBlockRule,
   matchesTransparentRule,
+  transparentQuicBlockRule,
   transparentForwardingState,
   transparentRulesFor
 } from './pfwRules.js'
@@ -340,6 +344,26 @@ const TransparentForwarding = ({ hasPFW, proxyIP }) => {
         }
       }
 
+      const desiredBlock = transparentQuicBlockRule()
+      const existingBlocks = Array.isArray(current?.BlockRules)
+        ? current.BlockRules
+        : []
+      const managedBlockIndexes = existingBlocks
+        .map((rule, index) =>
+          isManagedQuicBlockRule(rule) ? index : -1
+        )
+        .filter((index) => index >= 0)
+
+      if (managedBlockIndexes.length > 0) {
+        for (const index of managedBlockIndexes) {
+          if (!matchesQuicBlockRule(existingBlocks[index])) {
+            await api.put(`/plugins/pfw/block/${index}`, desiredBlock)
+          }
+        }
+      } else if (!existingBlocks.some(matchesQuicBlockRule)) {
+        await api.put('/plugins/pfw/block', desiredBlock)
+      }
+
       await load()
       alert.success('Tag-based transparent forwarding enabled')
     } catch (err) {
@@ -363,6 +387,17 @@ const TransparentForwarding = ({ hasPFW, proxyIP }) => {
 
       for (const index of managedIndexes) {
         await api.delete(`/plugins/pfw/forward/${index}`, {})
+      }
+
+      const managedBlockIndexes = (current?.BlockRules || [])
+        .map((rule, index) =>
+          isManagedQuicBlockRule(rule) ? index : -1
+        )
+        .filter((index) => index >= 0)
+        .sort((a, b) => b - a)
+
+      for (const index of managedBlockIndexes) {
+        await api.delete(`/plugins/pfw/block/${index}`, {})
       }
 
       await load()
@@ -417,9 +452,28 @@ const TransparentForwarding = ({ hasPFW, proxyIP }) => {
           </Text>
 
           <VStack space="sm">
-            {['80', '443'].map((port) => (
+            {[
+              {
+                key: 'http',
+                icon: Route,
+                label: `${TRANSPARENT_CLIENT_TAG} tag - TCP port 80`,
+                target: `Route via ${proxyIP || 'proxy'} on ${TRANSPARENT_ROUTE_INTERFACE}`
+              },
+              {
+                key: 'https',
+                icon: Route,
+                label: `${TRANSPARENT_CLIENT_TAG} tag - TCP port 443`,
+                target: `Route via ${proxyIP || 'proxy'} on ${TRANSPARENT_ROUTE_INTERFACE}`
+              },
+              {
+                key: 'quic',
+                icon: Ban,
+                label: `${TRANSPARENT_CLIENT_TAG} tag - UDP port 443`,
+                target: 'Block QUIC to force TCP fallback'
+              }
+            ].map((item) => (
               <HStack
-                key={port}
+                key={item.key}
                 px="$4"
                 py="$3"
                 borderRadius="$xl"
@@ -438,13 +492,13 @@ const TransparentForwarding = ({ hasPFW, proxyIP }) => {
                 }}
               >
                 <HStack space="sm" alignItems="center">
-                  <Icon as={Route} size="sm" color="$primary600" />
+                  <Icon as={item.icon} size="sm" color="$primary600" />
                   <Text size="sm" fontWeight="$semibold">
-                    {TRANSPARENT_CLIENT_TAG} tag - TCP port {port}
+                    {item.label}
                   </Text>
                 </HStack>
                 <Text size="sm" color="$muted500" fontFamily="$mono">
-                  Route via {proxyIP || 'proxy'} on {TRANSPARENT_ROUTE_INTERFACE}
+                  {item.target}
                 </Text>
               </HStack>
             ))}
@@ -454,6 +508,8 @@ const TransparentForwarding = ({ hasPFW, proxyIP }) => {
             PFW preserves the original destination and policy-routes the packet
             through the container. The container then redirects ports 80 and
             443 to its transparent listener on port {TRANSPARENT_PROXY_PORT}.
+            Because transparent mode is TCP-only, blocking QUIC makes browsers
+            fall back to intercepted HTTPS over TCP.
           </Text>
 
           {state.configured && state.managedCount === 0 ? (

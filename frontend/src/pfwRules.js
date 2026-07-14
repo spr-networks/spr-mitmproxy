@@ -6,6 +6,7 @@ const PORTS = [
   { name: 'mitmproxy: transparent HTTP', port: '80' },
   { name: 'mitmproxy: transparent HTTPS', port: '443' }
 ]
+const QUIC_BLOCK_RULE_NAME = 'mitmproxy: block QUIC'
 
 const hostIP = (address) => String(address || '').trim().replace(/\/32$/, '')
 
@@ -29,24 +30,44 @@ export const transparentRulesFor = (proxyIP) =>
 export const isManagedTransparentRule = (rule) =>
   PORTS.some(({ name }) => rule?.RuleName === name)
 
-export const matchesTransparentRule = (rule, desired) => {
-  const scheduled =
-    rule?.Condition ||
-    Number(rule?.Expiration || 0) !== 0 ||
-    rule?.Time?.CronExpr ||
-    rule?.Time?.Start ||
-    rule?.Time?.End
-  const client = rule?.Client || {}
+export const transparentQuicBlockRule = () => ({
+  RuleName: QUIC_BLOCK_RULE_NAME,
+  Client: { Tag: TRANSPARENT_CLIENT_TAG },
+  Protocol: 'udp',
+  Dst: { IP: '0.0.0.0/0' },
+  DstPort: '443',
+  Disabled: false,
+  Condition: '',
+  Expiration: 0
+})
 
+export const isManagedQuicBlockRule = (rule) =>
+  rule?.RuleName === QUIC_BLOCK_RULE_NAME
+
+const activeWithoutSchedule = (rule) =>
+  !rule?.Disabled &&
+  !rule?.Condition &&
+  Number(rule?.Expiration || 0) === 0 &&
+  !rule?.Time?.CronExpr &&
+  !rule?.Time?.Start &&
+  !rule?.Time?.End
+
+const matchesTaggedClient = (rule) => {
+  const client = rule?.Client || {}
   return (
-    !rule?.Disabled &&
-    !scheduled &&
-    String(rule?.Protocol || '').toLowerCase() === 'tcp' &&
     client.Tag === TRANSPARENT_CLIENT_TAG &&
     !client.Group &&
     !client.Identity &&
     !client.SrcIP &&
-    !client.Endpoint &&
+    !client.Endpoint
+  )
+}
+
+export const matchesTransparentRule = (rule, desired) => {
+  return (
+    activeWithoutSchedule(rule) &&
+    String(rule?.Protocol || '').toLowerCase() === 'tcp' &&
+    matchesTaggedClient(rule) &&
     rule?.OriginalDst?.IP === '0.0.0.0/0' &&
     String(rule?.OriginalDstPort || '') === desired.OriginalDstPort &&
     hostIP(rule?.Dst?.IP) === hostIP(desired.Dst.IP) &&
@@ -54,6 +75,13 @@ export const matchesTransparentRule = (rule, desired) => {
     rule?.DstInterface === TRANSPARENT_ROUTE_INTERFACE
   )
 }
+
+export const matchesQuicBlockRule = (rule) =>
+  activeWithoutSchedule(rule) &&
+  String(rule?.Protocol || '').toLowerCase() === 'udp' &&
+  matchesTaggedClient(rule) &&
+  rule?.Dst?.IP === '0.0.0.0/0' &&
+  String(rule?.DstPort || '') === '443'
 
 export const transparentForwardingState = (config, proxyIP) => {
   const rules = Array.isArray(config?.ForwardingRules)
@@ -70,17 +98,34 @@ export const transparentForwardingState = (config, proxyIP) => {
     desired.some((expected) => matchesTransparentRule(rules[index], expected))
   )
   const desiredRulesPresent = matching.every((index) => index >= 0)
+  const blockRules = Array.isArray(config?.BlockRules) ? config.BlockRules : []
+  const blockMatchingIndex = blockRules.findIndex(matchesQuicBlockRule)
+  const managedBlockIndexes = blockRules
+    .map((rule, index) => (isManagedQuicBlockRule(rule) ? index : -1))
+    .filter((index) => index >= 0)
+  const managedBlockRulesValid = managedBlockIndexes.every((index) =>
+    matchesQuicBlockRule(blockRules[index])
+  )
+  const managedCount = managedIndexes.length + managedBlockIndexes.length
+  const configured =
+    !!proxyIP &&
+    desiredRulesPresent &&
+    managedRulesValid &&
+    blockMatchingIndex >= 0 &&
+    managedBlockRulesValid
 
   return {
     desired,
     matching,
     matchingCount: matching.filter((index) => index >= 0).length,
     managedIndexes,
-    managedCount: managedIndexes.length,
-    configured: !!proxyIP && desiredRulesPresent && managedRulesValid,
+    managedBlockIndexes,
+    blockMatchingIndex,
+    managedCount,
+    configured,
     needsRepair:
       !!proxyIP &&
-      managedIndexes.length > 0 &&
-      (!desiredRulesPresent || !managedRulesValid)
+      managedCount > 0 &&
+      !configured
   }
 }
