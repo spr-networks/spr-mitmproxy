@@ -72,13 +72,25 @@ const findMitmNetwork = (networks) =>
       network.Options?.['com.docker.network.bridge.name'] === MITM_INTERFACE
   )
 
-const serviceIPFor = (subnet) => {
+const fallbackServiceIPFor = (subnet) => {
   const parts = String(subnet || '').split('/')[0].split('.')
   if (parts.length !== 4 || parts.some((part) => !/^\d+$/.test(part))) {
     return ''
   }
   return `${parts[0]}.${parts[1]}.${parts[2]}.2`
 }
+
+const containerIPFor = (network) => {
+  const containers = Object.values(network?.Containers || {})
+  const container =
+    containers.find((candidate) => candidate.Name === 'spr-mitmproxy') ||
+    (containers.length === 1 ? containers[0] : null)
+  const address = String(container?.IPv4Address || '').split('/')[0]
+
+  return address || fallbackServiceIPFor(network?.IPAM?.Config?.[0]?.Subnet)
+}
+
+const hostIP = (address) => String(address || '').trim().replace(/\/32$/, '')
 
 const EndpointLink = ({ href, children }) => {
   if (!href) {
@@ -143,7 +155,7 @@ const SetupGuide = ({ hasPFW, proxyIP }) => (
     <SectionHeader title="Connect a device" />
     <VStack space="lg">
       <Step number="1" title="Allow the container network">
-        Review the detected source range below, then save the firewall access
+        Confirm the detected container IP below, then save the firewall access
         rule for {MITM_INTERFACE}.
       </Step>
       <Step number="2" title="Grant device access">
@@ -260,11 +272,12 @@ export default function InterfaceInfo({ hasPFW }) {
       if (networksResult.status === 'fulfilled') {
         const network = findMitmNetwork(networksResult.value)
         const detectedSubnet = network?.IPAM?.Config?.[0]?.Subnet || ''
+        const detectedProxyIP = containerIPFor(network)
         setSubnet(detectedSubnet)
-        setProxyIP(serviceIPFor(detectedSubnet))
+        setProxyIP(detectedProxyIP)
         rule = normalizeRule({
           ...rule,
-          SrcIP: rule.SrcIP || detectedSubnet
+          SrcIP: rule.SrcIP || detectedProxyIP
         })
       } else {
         errors.push('Unable to detect the mitmproxy Docker network.')
@@ -295,7 +308,7 @@ export default function InterfaceInfo({ hasPFW }) {
   const setRecommended = () => {
     setInterfaceInfo((current) => ({
       ...current,
-      SrcIP: subnet || current.SrcIP,
+      SrcIP: proxyIP || current.SrcIP,
       Policies: [...DEFAULT_POLICIES],
       Groups: [...DEFAULT_GROUPS],
       Tags: []
@@ -316,7 +329,12 @@ export default function InterfaceInfo({ hasPFW }) {
 
   const save = async () => {
     if (!interfaceInfo.SrcIP.trim()) {
-      setError('Configured Source Range is required.')
+      setError('Container Source IP is required.')
+      return
+    }
+
+    if (proxyIP && hostIP(interfaceInfo.SrcIP) !== proxyIP) {
+      setError(`Container Source IP must match the detected address ${proxyIP}.`)
       return
     }
 
@@ -371,20 +389,24 @@ export default function InterfaceInfo({ hasPFW }) {
     ? `http://${proxyIP}:8081${tokenQuery}`
     : ''
   const configured = !!previousInterfaceInfo
+  const sourceMismatch =
+    !!proxyIP && !!interfaceInfo.SrcIP && hostIP(interfaceInfo.SrcIP) !== proxyIP
   const ruleStatus = !interfaceInfo.SrcIP
-    ? 'Source range required'
-    : dirty
-      ? configured
-        ? 'Unsaved changes'
-        : 'Ready to save'
-      : 'Configured'
+    ? 'Source IP required'
+    : sourceMismatch
+      ? 'Update required'
+      : dirty
+        ? configured
+          ? 'Unsaved changes'
+          : 'Ready to save'
+        : 'Configured'
 
   return (
     <>
       <Card>
         <SectionHeader
           title="Proxy access"
-          right={<StatusDot online={!!subnet} warn={!subnet} />}
+          right={<StatusDot online={!!proxyIP} warn={!proxyIP} />}
         />
         <VStack space="md">
           <HStack flexWrap="wrap" gap="$2">
@@ -418,7 +440,13 @@ export default function InterfaceInfo({ hasPFW }) {
           title="Firewall access"
           right={
             <Badge
-              action={!interfaceInfo.SrcIP ? 'error' : dirty ? 'warning' : 'success'}
+              action={
+                !interfaceInfo.SrcIP || sourceMismatch
+                  ? 'error'
+                  : dirty
+                    ? 'warning'
+                    : 'success'
+              }
               variant="outline"
               borderRadius="$full"
             >
@@ -430,16 +458,31 @@ export default function InterfaceInfo({ hasPFW }) {
           <ErrorNotice message={error} />
 
           <TextField
-            label="Configured Source Range"
+            label="Container Source IP"
             value={interfaceInfo.SrcIP}
             onChangeText={(value) => update('SrcIP', value)}
-            placeholder="172.22.0.0/16"
-            helper={`Traffic arriving from ${MITM_INTERFACE} is matched against this CIDR range.`}
-            error={!interfaceInfo.SrcIP ? 'Enter the mitmproxy container subnet.' : ''}
+            placeholder="172.23.0.2"
+            helper={`SPR uses this address to identify the mitmproxy container on ${MITM_INTERFACE}.`}
+            error={
+              !interfaceInfo.SrcIP
+                ? 'Enter the mitmproxy container IP.'
+                : sourceMismatch
+                  ? `This does not match the detected container IP ${proxyIP}.`
+                  : ''
+            }
           />
 
           <VStack space="xs">
-            <KeyVal label="Docker address range" value={subnet || 'Not detected'} mono />
+            <KeyVal
+              label="Detected container IP"
+              value={proxyIP || 'Not detected'}
+              mono
+            />
+            <KeyVal
+              label="Docker address range"
+              value={subnet || 'Not detected'}
+              mono
+            />
             <KeyVal label="Bridge interface" value={MITM_INTERFACE} mono />
           </VStack>
 
@@ -505,12 +548,14 @@ export default function InterfaceInfo({ hasPFW }) {
               onPress={setRecommended}
             >
               <ButtonIcon as={RotateCcw} mr="$2" />
-              <ButtonText>Use recommended</ButtonText>
+              <ButtonText>Use detected IP</ButtonText>
             </Button>
             <Button
               action="primary"
               size="sm"
-              isDisabled={saving || !dirty || !interfaceInfo.SrcIP}
+              isDisabled={
+                saving || !dirty || !interfaceInfo.SrcIP || sourceMismatch
+              }
               onPress={save}
             >
               <ButtonIcon as={Save} mr="$2" />
