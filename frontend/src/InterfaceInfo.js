@@ -441,11 +441,17 @@ const TransparentForwarding = ({ hasPFW, proxyIP }) => {
                   </Text>
                 </HStack>
                 <Text size="sm" color="$muted500" fontFamily="$mono">
-                  {proxyIP || 'proxy'}:{TRANSPARENT_PROXY_PORT}
+                  DNAT to {proxyIP || 'proxy'}:{TRANSPARENT_PROXY_PORT}
                 </Text>
               </HStack>
             ))}
           </VStack>
+
+          <Text size="xs" color="$muted500">
+            PFW rewrites both the destination address and port. mitmproxy's
+            transparent listener recovers the original host and port from
+            conntrack before connecting upstream.
+          </Text>
 
           {state.configured && state.managedCount === 0 ? (
             <Text size="xs" color="$muted500">
