@@ -44,7 +44,9 @@ export default class API {
 
   getApiURL() {
     const { REACT_APP_API } = process.env
-    const API_URL = REACT_APP_API || window?.SPR_API_URL || ''
+    // SPR injects SPR_API_URL into the plugin document. Keep root-relative API
+    // requests working as a fallback if an older host does not inject it.
+    const API_URL = REACT_APP_API || window?.SPR_API_URL || '/'
     return API_URL
   }
 

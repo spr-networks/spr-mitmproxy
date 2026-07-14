@@ -130,23 +130,17 @@ const InterfaceInfo = () => {
 
   const fetchConfig = () => {
     firewallAPI.config().then((c) => {
-      let found = false
-      if (c.CustomInterfaceRules) {
-        for(let x of c.CustomInterfaceRules) {
-          if (x.Interface === mitmName) {
-            setInterfaceInfo(x)
-            setPreviousInterfaceInfo(x)
-            found = true
-          }
-        }
-      }
-
-      if (found === false) {
-        setError("Please configure the mitmweb0 interface")
+      const configuredRule = c.CustomInterfaceRules?.find(
+        (rule) => rule.Interface === mitmName
+      )
+      if (configuredRule) {
+        setInterfaceInfo(configuredRule)
+        setPreviousInterfaceInfo(configuredRule)
       }
       setLoading(false)
     }).catch(err => {
-      setError("oops")
+      setError(`Unable to load firewall config${err.status ? ` (${err.status})` : ''}`)
+      setLoading(false)
     })
 
 
@@ -163,17 +157,17 @@ const InterfaceInfo = () => {
           (n) => n.Options && n.Options['com.docker.network.bridge.name']
         )
 
-        let s = []
-        let blocks = []
         for (let n of networked) {
           let iface = n.Options['com.docker.network.bridge.name']
-          s.push(iface)
           if (n.IPAM?.Config?.[0]?.Subnet) {
             let subnet = n.IPAM.Config[0].Subnet
-            if (iface == mitmName) {
+            if (iface === mitmName) {
               setSubnet(subnet)
+              setInterfaceInfo((current) => ({
+                ...current,
+                SrcIP: current.SrcIP || subnet
+              }))
               if (subnet.includes('/')) {
-                let x = subnet.split('/')[0]
                 let y = subnet.split('.')
                 setSubnetIP(y[0] + '.' + y[1] + '.' + y[2] + '.' + '2')
               }
@@ -183,7 +177,10 @@ const InterfaceInfo = () => {
         setLoading(false)
       })
       //.catch((err) => alertContext.error('fail ' + err))
-      .catch((err) => {})
+      .catch((err) => {
+        setError((current) => current || 'Unable to load Docker network information')
+        setLoading(false)
+      })
   }, []);
 
 
