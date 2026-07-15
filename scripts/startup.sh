@@ -2,6 +2,24 @@
 
 set -euo pipefail
 
+MITMPROXY_MTU="${MITMPROXY_MTU:-1400}"
+if [[ ! "${MITMPROXY_MTU}" =~ ^[0-9]+$ ]] || (( MITMPROXY_MTU < 576 )); then
+        echo "Invalid MITMPROXY_MTU: ${MITMPROXY_MTU}" >&2
+        exit 1
+fi
+
+for iface_path in /sys/class/net/*; do
+	iface="${iface_path##*/}"
+	operstate=""
+	if [[ -f "${iface_path}/operstate" ]]; then
+		read -r operstate < "${iface_path}/operstate"
+	fi
+	if [[ "${iface}" != "lo" && "${operstate}" == "up" && -f "${iface_path}/mtu" ]]; then
+		ip link set dev "${iface}" mtu "${MITMPROXY_MTU}"
+		echo "Configured ${iface} MTU ${MITMPROXY_MTU}"
+	fi
+done
+
 nft -f - << EOF
 table inet mitmproxy {
         chain prerouting {

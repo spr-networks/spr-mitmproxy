@@ -595,6 +595,7 @@ export default function InterfaceInfo({ hasPFW }) {
   const [error, setError] = useState('')
   const [subnet, setSubnet] = useState('')
   const [proxyIP, setProxyIP] = useState('')
+  const [networkMTU, setNetworkMTU] = useState(0)
   const [webpass, setWebpass] = useState('')
   const [interfaceInfo, setInterfaceInfo] = useState(defaultRule)
   const [previousInterfaceInfo, setPreviousInterfaceInfo] = useState(null)
@@ -603,11 +604,12 @@ export default function InterfaceInfo({ hasPFW }) {
     let active = true
 
     const load = async () => {
-      const [firewallResult, webpassResult, networksResult] =
+      const [firewallResult, webpassResult, networksResult, networkInfoResult] =
         await Promise.allSettled([
           firewallAPI.config(),
           api.get('/plugins/spr-mitmproxy/webpass'),
-          api.get('/info/dockernetworks')
+          api.get('/info/dockernetworks'),
+          api.get('/plugins/spr-mitmproxy/network')
         ])
 
       if (!active) return
@@ -643,6 +645,10 @@ export default function InterfaceInfo({ hasPFW }) {
         })
       } else {
         errors.push('Unable to detect the mitmproxy Docker network.')
+      }
+
+      if (networkInfoResult.status === 'fulfilled') {
+        setNetworkMTU(Number(networkInfoResult.value?.MTU || 0))
       }
 
       setInterfaceInfo(rule)
@@ -778,6 +784,11 @@ export default function InterfaceInfo({ hasPFW }) {
               mono
             />
             <StatTile
+              label="Network MTU"
+              value={networkMTU ? String(networkMTU) : 'Not detected'}
+              mono
+            />
+            <StatTile
               label="HTTP proxy"
               value={proxyIP ? `${proxyIP}:9998` : 'Unavailable'}
               mono
@@ -843,6 +854,11 @@ export default function InterfaceInfo({ hasPFW }) {
             <KeyVal
               label="Docker address range"
               value={subnet || 'Not detected'}
+              mono
+            />
+            <KeyVal
+              label="Container MTU"
+              value={networkMTU ? String(networkMTU) : 'Not detected'}
               mono
             />
             <KeyVal label="Bridge interface" value={MITM_INTERFACE} mono />

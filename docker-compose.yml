@@ -12,6 +12,8 @@ services:
     logging: *default-logging
     cap_add:
       - NET_ADMIN
+    environment:
+      MITMPROXY_MTU: "1400"
     sysctls:
       - net.ipv4.ip_forward=0
     networks:
@@ -24,3 +26,4 @@ networks:
   mitmnet:
     driver_opts:
       com.docker.network.bridge.name: mitmweb0
+      com.docker.network.driver.mtu: "1400"

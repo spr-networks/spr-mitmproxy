@@ -48,6 +48,10 @@ dropped in the container so they cannot loop back through the SPR host.
 The plugin UI also reports a PFW conflict if any enabled forwarding rule sends
 ports other than TCP 80/443 to `mitmweb0`.
 
+The dedicated Docker bridge and the container interface use MTU 1400. This
+keeps both sides of the transparent TCP proxy below common VPN/tunnel path MTUs
+and avoids black-holed TLS records when path-MTU discovery is unavailable.
+
 <img width="1444" alt="image" src="https://github.com/user-attachments/assets/ade223fa-e124-4128-94d5-7bfd5d83f8f2">
 
 - Optionally visit http://mitm.it and install the mitmproxy certificate to the trust store
