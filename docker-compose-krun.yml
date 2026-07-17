@@ -1,0 +1,21 @@
+services:
+  spr-mitmproxy:
+    extends:
+      file: docker-compose.yml
+      service: spr-mitmproxy
+    runtime: ${SPR_KRUN_RUNTIME:-krun-atlas}
+    network_mode: host
+    networks: !reset []
+    sysctls: !reset []
+    annotations:
+      krun.cpus: "${SPR_KRUN_CPUS:-2}"
+      krun.ram_mib: "${SPR_KRUN_RAM_MIB:-1024}"
+      krun.tap_name: "kmitmproxy0"
+      krun.net_mac: "${SPR_KRUN_MAC:-02:53:50:52:4b:0a}"
+      krun.vsock_path: "/state/plugins/spr-mitmproxy/socket"
+      krun.vsock_port: "4040"
+    environment:
+      SPR_KRUN_PLUGIN_SOCKET: "/run/spr-krun-plugin/spr-mitmproxy.sock"
+      SPR_KRUN_VSOCK_PORT: "4040"
+    devices:
+      - "/dev/net/tun:/dev/net/tun"
