@@ -1,6 +1,6 @@
 {
   "Name": "mitmproxy",
-  "ComposeFilePath": "plugins/user/spr-mitmproxy/docker-compose-krun.yml",
+  "Runtime": "kvm",
   "Enabled": true,
   "UnixPath": "/state/plugins/spr-mitmproxy/socket",
   "URI": "spr-mitmproxy",
