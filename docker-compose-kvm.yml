@@ -3,14 +3,14 @@ services:
     extends:
       file: docker-compose.yml
       service: spr-mitmproxy
+    image: ghcr.io/spr-networks/spr-mitmproxy:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:--krun}
     runtime: ${SPR_KRUN_RUNTIME:-spr-krun}
-    network_mode: host
-    networks: !reset []
     sysctls: !reset []
     annotations:
       krun.cpus: "${SPR_KRUN_CPUS:-2}"
       krun.ram_mib: "${SPR_KRUN_RAM_MIB:-1024}"
-      krun.tap_name: "kmitmproxy0"
+      krun.tap_name: "kruntap0"
+      krun.net_uplink: "eth0"
       krun.net_mac: "${SPR_KRUN_MAC:-02:53:50:52:4b:0a}"
       krun.vsock_path: "/state/plugins/spr-mitmproxy/socket"
       krun.vsock_port: "4040"
@@ -21,3 +21,9 @@ services:
       MITMPROXY_EXPECTED_MAC: "${SPR_KRUN_MAC:-02:53:50:52:4b:0a}"
     devices:
       - "/dev/net/tun:/dev/net/tun"
+
+networks:
+  mitmnet:
+    driver_opts:
+      com.docker.network.bridge.name: mitmweb0
+      com.docker.network.driver.mtu: "1400"

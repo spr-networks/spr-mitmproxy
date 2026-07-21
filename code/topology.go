@@ -8,7 +8,7 @@ import (
 
 // mitmBridgeInterface is the host-side docker bridge name (see
 // docker-compose.yml driver_opts com.docker.network.bridge.name).
-var mitmBridgeInterface = "kmitmproxy0"
+var mitmBridgeInterface = "mitmweb0"
 
 // TopoNode / TopoEdge / Topology mirror the shapes SPR expects from plugin
 // topology endpoints (same contract as spr-tailscale). The SPR host merges
