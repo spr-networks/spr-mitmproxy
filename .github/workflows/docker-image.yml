@@ -9,6 +9,10 @@ on:
       - completed
     branches: [main]
 
+env:
+  REGCTL_VERSION: v0.11.5
+  REGCTL_LINUX_AMD64_SHA256: c93aa7638749f5aaac1a8e01787321889c78f0101809bb2880343478d0ba0467
+
 jobs:
 
   buildx:
@@ -97,6 +101,28 @@ jobs:
             --set "*.labels.org.supernetworks.ci=true" \
             --set "*.labels.org.supernetworks.version=${RELEASE_VERSION:-latest}${RELEASE_CHANNEL}" \
             $PUSH_FLAG || exit 1
+      -
+        name: Install regctl
+        if: ${{ steps.repro.outputs.push == 'true' }}
+        run: |
+          curl -fsSLo /tmp/regctl \
+            "https://github.com/regclient/regclient/releases/download/${REGCTL_VERSION}/regctl-linux-amd64"
+          echo "${REGCTL_LINUX_AMD64_SHA256}  /tmp/regctl" | sha256sum -c -
+          sudo install -m 0755 /tmp/regctl /usr/local/bin/regctl
+      -
+        name: Remove inherited exposed-port metadata
+        if: ${{ steps.repro.outputs.push == 'true' }}
+        env:
+          IMAGE: ghcr.io/spr-networks/spr-mitmproxy:${{ env.RELEASE_VERSION || 'latest' }}${{ env.RELEASE_CHANNEL }}
+          LATEST_IMAGE: ghcr.io/spr-networks/spr-mitmproxy:latest${{ env.RELEASE_CHANNEL }}
+        run: |
+          regctl image mod "$IMAGE" --replace \
+            --expose-rm 8080/tcp \
+            --expose-rm 8081/tcp
+          regctl image copy "$IMAGE" "$LATEST_IMAGE"
+          for platform in linux/amd64 linux/arm64; do
+            test "$(regctl image inspect --platform "$platform" "$IMAGE" --format '{{len .Config.ExposedPorts}}')" = 0
+          done
       -
         name: Resolve pushed image digest
         id: digest
