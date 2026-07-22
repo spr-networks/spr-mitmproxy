@@ -19,6 +19,10 @@ services:
       SPR_KRUN_VSOCK_PORT: "4040"
       MITMPROXY_INTERFACE: "eth0"
       MITMPROXY_EXPECTED_MAC: "${SPR_KRUN_MAC:-02:53:50:52:4b:0a}"
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
     devices:
       - "/dev/net/tun:/dev/net/tun"
 
