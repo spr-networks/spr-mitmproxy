@@ -3,9 +3,11 @@ ARG ALPINE_REF=alpine@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a
 ARG UBUNTU_REF=ubuntu:24.04@sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06ba2cef9ebffbc7092d90
 ARG NODE_REF=node:18@sha256:c6ae79e38498325db67193d391e6ec1d224d96c693a8a4d943498556716d3783
 ARG MITMPROXY_REF=mitmproxy/mitmproxy@sha256:00b77b5d8804c8ad18cb6caefbf9d5849e895e8986c5ce011f4ae30f4385962f
+ARG SPR_KRUN_PLUGIN_REF=ghcr.io/spr-networks/spr-krun-plugin:latest
 ARG SOURCE_DATE_EPOCH
 
 FROM ${ALPINE_REF} AS cacerts
+FROM ${SPR_KRUN_PLUGIN_REF} AS krun-plugin
 
 FROM ${UBUNTU_REF} AS builder
 ENV DEBIAN_FRONTEND=noninteractive
@@ -49,9 +51,12 @@ RUN set -eux; \
     printf 'Types: deb\nURIs: https://snapshot.debian.org/archive/debian/%s\nSuites: trixie trixie-updates\nComponents: main\nSigned-By: /usr/share/keyrings/debian-archive-keyring.pgp\n\nTypes: deb\nURIs: https://snapshot.debian.org/archive/debian-security/%s\nSuites: trixie-security\nComponents: main\nSigned-By: /usr/share/keyrings/debian-archive-keyring.pgp\n' "${DEBIAN_SNAPSHOT}" "${DEBIAN_SNAPSHOT}" > /etc/apt/sources.list.d/debian.sources; \
     printf 'APT::Install-Recommends "false";\nAcquire::Check-Valid-Until "false";\n' > /etc/apt/apt.conf.d/99reproducible; \
     apt-get update; \
-    apt-get install -y --no-install-recommends curl nftables haproxy iproute2; \
+    apt-get install -y --no-install-recommends curl nftables haproxy iproute2 util-linux; \
     rm -rf /var/lib/apt/lists/* /var/log/* /var/cache/ldconfig/aux-cache
+COPY --from=krun-plugin /usr/local/bin/spr-krun-init /usr/local/bin/
+COPY --from=krun-plugin /usr/local/bin/spr-krun-vsock-proxy /usr/local/bin/
 COPY scripts /scripts
 COPY --from=builder /main /
 COPY --from=builder-ui /app/build /ui/
-ENTRYPOINT ["/scripts/startup.sh"]
+ENTRYPOINT ["/usr/local/bin/spr-krun-init"]
+CMD ["/scripts/startup.sh"]

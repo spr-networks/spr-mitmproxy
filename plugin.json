@@ -1,11 +1,17 @@
 {
   "Name": "mitmproxy",
-  "ComposeFilePath": "plugins/user/spr-mitmproxy/docker-compose.yml",
+  "Runtime": "kvm",
   "Enabled": true,
   "UnixPath": "/state/plugins/spr-mitmproxy/socket",
   "URI": "spr-mitmproxy",
   "HasUI": true,
   "Icon": "Search",
   "HasTopology": true,
-  "SandboxedUI": false
+  "SandboxedUI": true,
+  "NetworkCapabilities": {
+    "Interface": "mitmweb0",
+    "DeviceMAC": "02:53:50:52:4b:0a",
+    "Policies": ["wan", "dns", "lan"],
+    "Groups": []
+  }
 }

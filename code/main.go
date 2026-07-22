@@ -13,7 +13,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var UNIX_PLUGIN_LISTENER = "/state/plugins/spr-mitmproxy/socket"
+var UNIX_PLUGIN_LISTENER = "/run/spr-krun-plugin/spr-mitmproxy.sock"
 
 // set up SPA handler. From gorilla mux's documentation
 type spaHandler struct {
