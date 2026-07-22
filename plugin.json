@@ -2,7 +2,7 @@
   "Name": "mitmproxy",
   "Runtime": "kvm",
   "Enabled": true,
-  "UnixPath": "/state/plugins/spr-mitmproxy/socket",
+  "UnixPath": "/state/plugins/spr-mitmproxy/socket.sock",
   "URI": "spr-mitmproxy",
   "HasUI": true,
   "Icon": "Search",
