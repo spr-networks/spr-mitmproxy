@@ -7,7 +7,7 @@
   "HasUI": true,
   "Icon": "Search",
   "HasTopology": true,
-  "SandboxedUI": true,
+  "SandboxedUI": false,
   "NetworkCapabilities": {
     "Interface": "mitmweb0",
     "DeviceMAC": "02:53:50:52:4b:0a",
