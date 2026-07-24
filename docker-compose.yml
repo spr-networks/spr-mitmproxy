@@ -6,7 +6,7 @@ x-logging:
 services:
   spr-mitmproxy:
     container_name: spr-mitmproxy
-    image: ghcr.io/spr-networks/spr-mitmproxy:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:-}
+    image: ghcr.io/spr-networks/spr-mitmproxy:latest
     build:
       context: "${BUILDCTX:-.}"
     logging: *default-logging

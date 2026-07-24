@@ -3,7 +3,7 @@ services:
     extends:
       file: docker-compose.yml
       service: spr-mitmproxy
-    image: ghcr.io/spr-networks/spr-mitmproxy:${RELEASE_VERSION:-latest}${RELEASE_CHANNEL:--krun}
+    image: ghcr.io/spr-networks/spr-mitmproxy:latest
     runtime: ${SPR_KRUN_RUNTIME:-spr-krun}
     sysctls: !reset []
     annotations:
