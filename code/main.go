@@ -13,7 +13,14 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var UNIX_PLUGIN_LISTENER = "/run/spr-krun-plugin/spr-mitmproxy.sock"
+var UNIX_PLUGIN_LISTENER = "/state/plugins/spr-mitmproxy/socket.sock"
+
+func pluginSocketPath() string {
+	if path := os.Getenv("SPR_KRUN_PLUGIN_SOCKET"); path != "" {
+		return path
+	}
+	return UNIX_PLUGIN_LISTENER
+}
 
 // set up SPA handler. From gorilla mux's documentation
 type spaHandler struct {
@@ -88,8 +95,12 @@ func main() {
 
 	//tbd dynamic webpass.
 
-	os.Remove(UNIX_PLUGIN_LISTENER)
-	unixPluginListener, err := net.Listen("unix", UNIX_PLUGIN_LISTENER)
+	socketPath := pluginSocketPath()
+	os.Remove(socketPath)
+	if err := os.MkdirAll(filepath.Dir(socketPath), 0755); err != nil {
+		panic(err)
+	}
+	unixPluginListener, err := net.Listen("unix", socketPath)
 	if err != nil {
 		panic(err)
 	}
